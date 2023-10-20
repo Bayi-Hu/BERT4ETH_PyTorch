@@ -47,6 +47,9 @@ print("MAX_SEQUENCE_LENGTH:", args.max_seq_length)
 print("MAX_PREDICTIONS_PER_SEQ:", MAX_PREDICTIONS_PER_SEQ)
 print("SLIDING_STEP:", SLIDING_STEP)
 
+class BertDataloader(AbstractDataloader):
+    pass
+
 class BertTrainDataset(data_utils.Dataset):
     def __init__(self, seq_list, mask_prob, mask_token, max_predictions_per_seq):
         self.seq_list = seq_list
