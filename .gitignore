@@ -1,3 +1,6 @@
 .idea/*
 .DS_Store
-./Model/gen_pretrain_data.py
+src/gen_pretrain_data.py
+src/Data/*
+src/experiments/*
+data/*
