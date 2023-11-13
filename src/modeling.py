@@ -1,7 +1,58 @@
+import math
+import torch
 import torch.nn as nn
-from .gelu import GELU
-from .layer_norm import LayerNorm
 import torch.nn.functional as F
+from abc import *
+from utils import fix_random_seed_as
+
+class PositionalEmbedding(nn.Module):
+
+    def __init__(self, max_len, d_model):
+        super().__init__()
+
+        # Compute the positional encodings once in log space.
+        self.pe = nn.Embedding(max_len, d_model)
+
+    def forward(self, x):
+        batch_size = x.size(0)
+        return self.pe.weight.unsqueeze(0).repeat(batch_size, 1, 1)
+
+class SegmentEmbedding(nn.Embedding):
+    def __init__(self, embed_size=512):
+        super().__init__(3, embed_size, padding_idx=0)
+
+class TokenEmbedding(nn.Embedding):
+    def __init__(self, vocab_size, embed_size=512):
+        super().__init__(vocab_size, embed_size, padding_idx=0)
+
+
+class BERTEmbedding(nn.Module):
+    """
+    BERT Embedding which is consisted with under features
+        1. TokenEmbedding : normal embedding matrix
+        2. PositionalEmbedding : adding positional information using sin, cos
+        2. SegmentEmbedding : adding sentence segment info, (sent_A:1, sent_B:2)
+
+        sum of all these features are output of BERTEmbedding
+    """
+
+    def __init__(self, vocab_size, embed_size, max_len, dropout=0.1):
+        """
+        :param vocab_size: total vocab size
+        :param embed_size: embedding size of token embedding
+        :param dropout: dropout rate
+        """
+        super().__init__()
+        self.token = TokenEmbedding(vocab_size=vocab_size, embed_size=embed_size)
+        self.position = PositionalEmbedding(max_len=max_len, d_model=embed_size)
+        # self.segment = SegmentEmbedding(embed_size=self.token.embedding_dim)
+        self.dropout = nn.Dropout(p=dropout)
+        self.embed_size = embed_size
+
+    def forward(self, sequence):
+        x = self.token(sequence) + self.position(sequence)  # + self.segment(segment_label)
+        return self.dropout(x)
+
 
 
 class PositionwiseFeedForward(nn.Module):
@@ -109,3 +160,110 @@ class MultiHeadedAttention(nn.Module):
         x = x.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
 
         return self.output_linear(x)
+
+class TransformerBlock(nn.Module):
+    """
+    Bidirectional Encoder = Transformer (self-attention)
+    Transformer = MultiHead_Attention + Feed_Forward with sublayer connection
+    """
+
+    def __init__(self, hidden, attn_heads, feed_forward_hidden, dropout):
+        """
+        :param hidden: hidden size of transformer
+        :param attn_heads: head sizes of multi-head attention
+        :param feed_forward_hidden: feed_forward_hidden, usually 4*hidden_size
+        :param dropout: dropout rate
+        """
+
+        super().__init__()
+        self.attention = MultiHeadedAttention(h=attn_heads, d_model=hidden, dropout=dropout)
+        self.feed_forward = PositionwiseFeedForward(d_model=hidden, d_ff=feed_forward_hidden, dropout=dropout)
+        self.input_sublayer = SublayerConnection(size=hidden, dropout=dropout)
+        self.output_sublayer = SublayerConnection(size=hidden, dropout=dropout)
+        self.dropout = nn.Dropout(p=dropout)
+
+    def forward(self, x, mask):
+        x = self.input_sublayer(x, lambda _x: self.attention.forward(_x, _x, _x, mask=mask))
+        x = self.output_sublayer(x, self.feed_forward)
+        return self.dropout(x)
+
+
+class BERT(nn.Module):
+    def __init__(self, args):
+        super().__init__()
+
+        fix_random_seed_as(args.model_init_seed)
+        # self.init_weights()
+
+        max_len = args.bert_max_len
+        num_items = args.num_items
+        n_layers = args.bert_num_blocks
+        heads = args.bert_num_heads
+        vocab_size = num_items + 2
+        hidden = args.bert_hidden_units
+        self.hidden = hidden
+        dropout = args.bert_dropout
+
+        # embedding for BERT, sum of positional, segment, token embeddings
+        self.embedding = BERTEmbedding(vocab_size=vocab_size, embed_size=self.hidden, max_len=max_len, dropout=dropout)
+
+        # multi-layers transformer blocks, deep network
+        self.transformer_blocks = nn.ModuleList(
+            [TransformerBlock(hidden, heads, hidden * 4, dropout) for _ in range(n_layers)])
+
+        self.out = nn.Linear(self.hidden, args.num_items + 1)
+
+    def forward(self, x):
+        mask = (x > 0).unsqueeze(1).repeat(1, x.size(1), 1).unsqueeze(1)
+
+        # embedding the indexed sequence to sequence of vectors
+        x = self.embedding(x)
+
+        # running over multiple transformer blocks
+        for transformer in self.transformer_blocks:
+            x = transformer.forward(x, mask)
+
+        x = self.out(x)
+
+        return x
+
+    def init_weights(self):
+        pass
+
+
+class BERT4ETH(nn.Module):
+    def __init__(self, args, config):
+        super().__init__()
+
+        fix_random_seed_as(args.model_init_seed)
+        # self.init_weights()
+        # embedding for BERT, sum of positional, segment, token embeddings
+        self.embedding = BERTEmbedding(vocab_size=config["vocab_size"],
+                                       embed_size=config["hidden_size"],
+                                       dropout=config["hidden_dropout_prob"],
+                                       max_len=args.max_seq_length)
+
+        # multi-layers transformer blocks, deep network
+        self.transformer_blocks = nn.ModuleList(
+            [TransformerBlock(config["hidden_size"],
+                              config["num_attention_heads"],
+                              config["hidden_size"] * 4,
+                              config["hidden_dropout_prob"])
+             for _ in range(config["num_hidden_layers"])])
+
+        # self.out = nn.Linear(config["hidden_size"], config["vocab_size"])
+
+    def forward(self, x):
+        mask = (x > 0).unsqueeze(1).repeat(1, x.size(1), 1).unsqueeze(1)
+
+        # embedding the indexed sequence to sequence of vectors
+        x = self.embedding(x)
+
+        # running over multiple transformer blocks
+        for transformer in self.transformer_blocks:
+            x = transformer.forward(x, mask)
+
+        return x
+
+    def init_weights(self):
+        pass

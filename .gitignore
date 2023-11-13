@@ -3,4 +3,6 @@
 src/gen_pretrain_data.py
 src/Data/*
 src/experiments/*
+src/inter_data/*
 data/*
+src/__pycache__/*

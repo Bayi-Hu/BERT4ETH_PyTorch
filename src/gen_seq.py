@@ -8,16 +8,14 @@ parser = argparse.ArgumentParser(description="Data Processing with PyTorch")
 parser.add_argument("--phisher", action='store_true', help="whether to include phisher detection dataset.")
 parser.add_argument("--deanon", action='store_true', help="whether to include de-anonymization dataset.")
 parser.add_argument("--tornado", action='store_true', help="whether to include tornado dataset.")
-parser.add_argument("--data_dir", type=str, default="./Data", help="data directory.")
+parser.add_argument("--data_dir", type=str, default="../data", help="data directory.")
 parser.add_argument("--dataset", type=str, default=None, help="which dataset to use")
-parser.add_argument("--bizdate", type=str, default=None, help="the date of running experiments.")
+parser.add_argument("--bizdate", type=str, default="local_test", help="the date of running experiments.")
 parser.add_argument("--dup", action='store_true', help="whether to do transaction duplication")
 args = parser.parse_args()
 
 print("Duplication:", args.dup)
 
-if args.bizdate is None:
-    raise ValueError("bizdate is required..")
 
 HEADER = 'hash,nonce,block_hash,block_number,transaction_index,from_address,to_address,value,gas,gas_price,input,block_timestamp,max_fee_per_gas,max_priority_fee_per_gas,transaction_type'.split(",")
 
@@ -235,55 +233,46 @@ def feature_bucketization(eoa2seq_agg):
 
 def main():
 
-    f_in = open(os.path.join(args.data_dir, "normal_eoa_transaction_in_slice_1000K.csv"), "r")
-    f_out = open(os.path.join(args.data_dir, "normal_eoa_transaction_out_slice_1000K.csv"), "r")
+    f_in = open(os.path.join(args.data_dir, "normal_eoa_transaction_in_slice_100K.csv"), "r")
+    f_out = open(os.path.join(args.data_dir, "normal_eoa_transaction_out_slice_100K.csv"), "r")
     print("Add normal account transactions.")
-
     eoa2seq_in, eoa2seq_out = load_data(f_in, f_out)
-
     if args.dup:
         eoa2seq_agg = seq_duplicate(eoa2seq_in, eoa2seq_out)
     else:
         eoa2seq_agg = seq_generation(eoa2seq_in, eoa2seq_out)
 
-    if args.phisher:
-        print("Add phishing..")
-        phisher_f_in = open(os.path.join(args.data_dir, "phisher_transaction_in.csv"), "r")
-        phisher_f_out = open(os.path.join(args.data_dir, "phisher_transaction_out.csv"), "r")
-        phisher_eoa2seq_in, phisher_eoa2seq_out = load_data(phisher_f_in, phisher_f_out)
-
-        if args.dup:
-            phisher_eoa2seq_agg = seq_duplicate(phisher_eoa2seq_in, phisher_eoa2seq_out)
-        else:
-            phisher_eoa2seq_agg = seq_generation(phisher_eoa2seq_in, phisher_eoa2seq_out)
-
-        eoa2seq_agg.update(phisher_eoa2seq_agg)
-
-    if args.deanon:
-        print("Add ENS..")
-        dean_f_in = open(os.path.join(args.data_dir, "dean_trans_in_new.csv"), "r")
-        dean_f_out = open(os.path.join(args.data_dir, "dean_trans_out_new.csv"), "r")
-        dean_eoa2seq_in, dean_eoa2seq_out = load_data(dean_f_in, dean_f_out)
-
-        if args.dup:
-            dean_eoa2seq_agg = seq_duplicate(dean_eoa2seq_in, dean_eoa2seq_out)
-        else:
-            dean_eoa2seq_agg = seq_generation(dean_eoa2seq_in, dean_eoa2seq_out)
-
-        eoa2seq_agg.update(dean_eoa2seq_agg)
-
-    if args.tornado:
-        print("Add tornado...")
-        tornado_in = open(os.path.join(args.data_dir, "tornado_trans_in_removed.csv"), "r")
-        tornado_out = open(os.path.join(args.data_dir, "tornado_trans_out_removed.csv"), "r")
-        tornado_eoa2seq_in, tornado_eoa2seq_out = load_data(tornado_in, tornado_out)
-
-        if args.dup:
-            tornado_eoa2seq_agg = seq_duplicate(tornado_eoa2seq_in, tornado_eoa2seq_out)
-        else:
-            tornado_eoa2seq_agg = seq_generation(tornado_eoa2seq_in, tornado_eoa2seq_out)
-
-        eoa2seq_agg.update(tornado_eoa2seq_agg)
+    # if args.phisher:
+    #     print("Add phishing..")
+    #     phisher_f_in = open(os.path.join(args.data_dir, "phisher_transaction_in.csv"), "r")
+    #     phisher_f_out = open(os.path.join(args.data_dir, "phisher_transaction_out.csv"), "r")
+    #     phisher_eoa2seq_in, phisher_eoa2seq_out = load_data(phisher_f_in, phisher_f_out)
+    #     if args.dup:
+    #         phisher_eoa2seq_agg = seq_duplicate(phisher_eoa2seq_in, phisher_eoa2seq_out)
+    #     else:
+    #         phisher_eoa2seq_agg = seq_generation(phisher_eoa2seq_in, phisher_eoa2seq_out)
+    #     eoa2seq_agg.update(phisher_eoa2seq_agg)
+    # if args.deanon:
+    #     print("Add ENS..")
+    #     dean_f_in = open(os.path.join(args.data_dir, "dean_trans_in_new.csv"), "r")
+    #     dean_f_out = open(os.path.join(args.data_dir, "dean_trans_out_new.csv"), "r")
+    #     dean_eoa2seq_in, dean_eoa2seq_out = load_data(dean_f_in, dean_f_out)
+    #     if args.dup:
+    #         dean_eoa2seq_agg = seq_duplicate(dean_eoa2seq_in, dean_eoa2seq_out)
+    #     else:
+    #         dean_eoa2seq_agg = seq_generation(dean_eoa2seq_in, dean_eoa2seq_out)
+    #     eoa2seq_agg.update(dean_eoa2seq_agg)
+    #
+    # if args.tornado:
+    #     print("Add tornado...")
+    #     tornado_in = open(os.path.join(args.data_dir, "tornado_trans_in_removed.csv"), "r")
+    #     tornado_out = open(os.path.join(args.data_dir, "tornado_trans_out_removed.csv"), "r")
+    #     tornado_eoa2seq_in, tornado_eoa2seq_out = load_data(tornado_in, tornado_out)
+    #     if args.dup:
+    #         tornado_eoa2seq_agg = seq_duplicate(tornado_eoa2seq_in, tornado_eoa2seq_out)
+    #     else:
+    #         tornado_eoa2seq_agg = seq_generation(tornado_eoa2seq_in, tornado_eoa2seq_out)
+    #     eoa2seq_agg.update(tornado_eoa2seq_agg)
 
     eoa2seq_agg = feature_bucketization(eoa2seq_agg)
 
