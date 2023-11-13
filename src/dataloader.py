@@ -1,10 +1,13 @@
 from abc import *
 from pathlib import Path
-import torch
 import numpy as np
 from tqdm import trange
 from collections import Counter
 import pickle
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.distributions import Categorical
 import math
 import random
 import torch.utils.data as data_utils
@@ -277,3 +280,54 @@ class BERT4ETHTrainDataset(data_utils.Dataset):
                torch.LongTensor(positions), \
                torch.LongTensor(input_mask), \
                torch.LongTensor(labels)
+
+
+
+
+
+
+
+# class NegativeSampler(nn.Module):
+#     def __init__(self, args, bert_config, output_weights, vocab):
+#         super().__init__()
+#         self.args = args
+#         self.vocab = vocab
+#         self.vocab_size = len(vocab.vocab_words) - 3
+#         self.output_weights = output_weights
+#         self.dense = nn.Linear(bert_config["hidden_size"], bert_config["hidden_size"])
+#         self.transform_act_fn = F.gelu  # Assuming GELU is used in bert_config.hidden_act
+#         self.LayerNorm = nn.LayerNorm(bert_config["hidden_size"], eps=1e-12)
+#         self.output_bias = nn.Parameter(torch.zeros(self.vocab_size + 1))
+#
+#     def forward(self, input_tensor, positions, label_ids, label_weights):
+#         # Handle negative sampling
+#         neg_ids = self.negative_sample(self.vocab_size, self.args.neg_sample_num)
+#
+#         input_tensor = gather_indexes(input_tensor, positions)
+#
+#         # Transformation
+#         input_tensor = self.dense(input_tensor)
+#         input_tensor = self.transform_act_fn(input_tensor)
+#         input_tensor = self.LayerNorm(input_tensor)
+#
+#         # Get embeddings
+#         label_ids = label_ids.view(-1)
+#         label_weights = label_weights.view(-1)
+#         pos_output_weights = self.output_weights(label_ids)  # Assuming output_weights is a nn.Embedding layer
+#         neg_output_weights = self.output_weights(neg_ids)
+#
+#         # Compute logits
+#         pos_logits = torch.sum(input_tensor * pos_output_weights, dim=-1).unsqueeze(1)
+#         neg_logits = torch.matmul(input_tensor, neg_output_weights.t())
+#
+#         logits = torch.cat([pos_logits, neg_logits], dim=1)
+#         logits += self.output_bias
+#
+#         log_probs = F.log_softmax(logits, dim=-1)
+#         per_example_loss = -log_probs[:, 0]
+#         numerator = torch.sum(label_weights * per_example_loss)
+#         denominator = torch.sum(label_weights) + 1e-5
+#         loss = numerator / denominator
+#
+#         return loss, per_example_loss, log_probs
+

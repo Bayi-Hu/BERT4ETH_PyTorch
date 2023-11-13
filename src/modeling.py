@@ -232,24 +232,24 @@ class BERT(nn.Module):
 
 
 class BERT4ETH(nn.Module):
-    def __init__(self, args, config):
+    def __init__(self, args):
         super().__init__()
 
         fix_random_seed_as(args.model_init_seed)
         # self.init_weights()
         # embedding for BERT, sum of positional, segment, token embeddings
-        self.embedding = BERTEmbedding(vocab_size=config["vocab_size"],
-                                       embed_size=config["hidden_size"],
-                                       dropout=config["hidden_dropout_prob"],
+        self.embedding = BERTEmbedding(vocab_size=args.vocab_size,
+                                       embed_size=args.hidden_size,
+                                       dropout=args.hidden_dropout_prob,
                                        max_len=args.max_seq_length)
 
         # multi-layers transformer blocks, deep network
         self.transformer_blocks = nn.ModuleList(
-            [TransformerBlock(config["hidden_size"],
-                              config["num_attention_heads"],
-                              config["hidden_size"] * 4,
-                              config["hidden_dropout_prob"])
-             for _ in range(config["num_hidden_layers"])])
+            [TransformerBlock(args.hidden_size,
+                              args.num_attention_heads,
+                              args.hidden_size * 4,
+                              args.hidden_dropout_prob)
+             for _ in range(args.num_hidden_layers)])
 
         # self.out = nn.Linear(config["hidden_size"], config["vocab_size"])
 
