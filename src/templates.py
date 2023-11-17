@@ -31,7 +31,7 @@ def set_template(args):
     args.initializer_range = 0.02
     args.num_hidden_layers = 2
     args.num_attention_heads = 2
-    args.vocab_size = 50000
+    args.vocab_size = 300000
     args.max_seq_length = 100
     args.hidden_dropout_prob = 0.2
     args.attention_probs_dropout_prob = 0.2

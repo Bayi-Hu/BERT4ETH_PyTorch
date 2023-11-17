@@ -24,7 +24,7 @@ def negative_sample(neg_strategy, vocab, sample_num):
 
     sampler = Categorical(weights)
     neg_ids = sampler.sample((sample_num,))
-    return neg_ids + 1
+    return neg_ids + 1 + 3
 
 def gather_indexes(sequence_tensor, positions):
     """
@@ -78,52 +78,42 @@ class BERT4ETHTrainer:
         labels = batch[6]
 
         # seqs, labels = batch
-        h = self.model(input_ids)  # B x T x V
-
-        neg_ids = negative_sample(self.args.neg_strategy,
-                                  self.vocab,
-                                  self.args.sample_num)
-
-
-
-        masked_h = gather_indexes(h, input_mask)
-
+        # h = self.model(input_ids)  # B x T x V
+        h = self.model(input_ids, counts, values, io_flags, positions)
+        # here forward we should also include other features.
 
         # Transformation
-        input_tensor = self.dense(input_tensor)
+        input_tensor = self.dense(h)
         input_tensor = self.transform_act_fn(input_tensor)
         input_tensor = self.LayerNorm(input_tensor)
 
-        # Get embeddings
-        label_ids = labels.view(-1)
-        label_weights = label_weights.view(-1)
-        pos_output_weights = self.output_weights(label_ids)  # Assuming output_weights is a nn.Embedding layer
-        neg_output_weights = self.output_weights(neg_ids)
 
-        # Compute logits
-        pos_logits = torch.sum(input_tensor * pos_output_weights, dim=-1).unsqueeze(1)
+        neg_ids = negative_sample(self.args.neg_strategy,
+                                  self.vocab,
+                                  self.args.neg_sample_num)
+
+        # labels = labels.view(-1)
+        label_mask = torch.where(labels > 0, 1, 0)
+        labels = torch.where(labels > 0, labels, 0)
+
+        pos_output_weights = self.model.embedding.token_embed(labels) # positive embedding
+        neg_output_weights = self.model.embedding.token_embed(neg_ids) # negative embedding
+
+        pos_logits = torch.sum(input_tensor * pos_output_weights, dim=-1).unsqueeze(-1)
         neg_logits = torch.matmul(input_tensor, neg_output_weights.t())
 
-        logits = torch.cat([pos_logits, neg_logits], dim=1)
-        logits += self.output_bias
+        logits = torch.cat([pos_logits, neg_logits], dim=2)
+        bias = torch.nn.Parameter(torch.zeros(logits.shape[-1]))
+        logits = logits + bias
 
-        log_probs = F.log_softmax(logits, dim=-1)
-        per_example_loss = -log_probs[:, 0]
-        numerator = torch.sum(label_weights * per_example_loss)
-        denominator = torch.sum(label_weights) + 1e-5
+        log_probs = torch.log_softmax(logits, -1)
+        per_example_loss = -log_probs[:,:,0]
+
+        numerator = torch.sum(label_mask * per_example_loss)
+        denominator = torch.sum(label_mask) + 1e-5
         loss = numerator / denominator
 
-        return loss, per_example_loss, log_probs
-
-        # do negative sampling here
-
-        logits = logits.view(-1, logits.size(-1))  # (B*T) x V
-        labels = labels.view(-1)  # B*T
-        # do negative sampling here.
-
-        loss = nn.CrossEntropyLoss(logits, labels, ignore_index=-1)
         return loss
-
 
     def train(self):
         accum_iter = 0

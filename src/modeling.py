@@ -36,24 +36,24 @@ class BERTEmbedding(nn.Module):
         sum of all these features are output of BERTEmbedding
     """
 
-    def __init__(self, vocab_size, embed_size, max_len, dropout=0.1):
+    def __init__(self, args):
         """
         :param vocab_size: total vocab size
         :param embed_size: embedding size of token embedding
         :param dropout: dropout rate
         """
         super().__init__()
-        self.token = TokenEmbedding(vocab_size=vocab_size, embed_size=embed_size)
-        self.position = PositionalEmbedding(max_len=max_len, d_model=embed_size)
-        # self.segment = SegmentEmbedding(embed_size=self.token.embedding_dim)
-        self.dropout = nn.Dropout(p=dropout)
-        self.embed_size = embed_size
 
-    def forward(self, sequence):
-        x = self.token(sequence) + self.position(sequence)  # + self.segment(segment_label)
+        self.token_embed = TokenEmbedding(vocab_size=args.vocab_size, embed_size=args.hidden_size)
+        self.value_embed = TokenEmbedding(vocab_size=15 , embed_size=args.hidden_size)
+        self.count_embed = TokenEmbedding(vocab_size=15, embed_size=args.hidden_size)
+        self.position_embed = TokenEmbedding(vocab_size=args.max_seq_length , embed_size=args.hidden_size)
+        self.io_embed = TokenEmbedding(vocab_size=3, embed_size=args.hidden_size)
+        self.dropout = nn.Dropout(p=args.hidden_dropout_prob)
+
+    def forward(self, input_ids, counts, values, io_flags, positions):
+        x = self.token_embed(input_ids) + self.count_embed(counts) + self.position_embed(positions) + self.io_embed(io_flags) + self.value_embed(values)
         return self.dropout(x)
-
-
 
 class PositionwiseFeedForward(nn.Module):
     "Implements FFN equation."
@@ -238,10 +238,7 @@ class BERT4ETH(nn.Module):
         fix_random_seed_as(args.model_init_seed)
         # self.init_weights()
         # embedding for BERT, sum of positional, segment, token embeddings
-        self.embedding = BERTEmbedding(vocab_size=args.vocab_size,
-                                       embed_size=args.hidden_size,
-                                       dropout=args.hidden_dropout_prob,
-                                       max_len=args.max_seq_length)
+        self.embedding = BERTEmbedding(args)
 
         # multi-layers transformer blocks, deep network
         self.transformer_blocks = nn.ModuleList(
@@ -253,11 +250,12 @@ class BERT4ETH(nn.Module):
 
         # self.out = nn.Linear(config["hidden_size"], config["vocab_size"])
 
-    def forward(self, x):
-        mask = (x > 0).unsqueeze(1).repeat(1, x.size(1), 1).unsqueeze(1)
+    def forward(self, input_ids, counts, values, io_flags, positions):
+
+        mask = (input_ids > 0).unsqueeze(1).repeat(1, input_ids.size(1), 1).unsqueeze(1)
 
         # embedding the indexed sequence to sequence of vectors
-        x = self.embedding(x)
+        x = self.embedding(input_ids, counts, values, io_flags, positions)
 
         # running over multiple transformer blocks
         for transformer in self.transformer_blocks:
