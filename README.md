@@ -2,12 +2,11 @@
 
 This is the PyTorch implementation for the paper [BERT4ETH: A Pre-trained Transformer for Ethereum Fraud Detection](https://dl.acm.org/doi/abs/10.1145/3543507.3583345), accepted by the ACM Web conference (WWW) 2023.
 
-I am still working on :) 2023/11/12
+I finished the first draft and will test the performance soon. 2023/11/17
 
 ## Getting Start
 
 ### Requirements
-
 
 ### Preprocess dataset 
 
@@ -42,40 +41,7 @@ python gen_seq.py --bizdate=bert4eth_exp
 
 ### Pre-training
 
-<!-- 
-#### Step 0: Model Configuration
-
-The configuration file is "Model/bert_config.json"
-```
-{
-  "attention_probs_dropout_prob": 0.2,
-  "hidden_act": "gelu",
-  "hidden_dropout_prob": 0.2,
-  "hidden_size": 64,
-  "initializer_range": 0.02,
-  "intermediate_size": 64,
-  "max_position_embeddings": 50,
-  "num_attention_heads": 2,
-  "num_hidden_layers": 8,
-  "type_vocab_size": 2,
-  "vocab_size": 3000000
-}
-```
--->
-
-#### Step 1: Pre-training Data Generation from Sequence 
-
-[//]: # (&#40;Masking, I/O separation and ERC20 log&#41;)
-
-```sh
-python gen_pretrain_data.py --bizdate=bert4eth_exp  \ 
-                            --max_seq_length=100  \
-                            --dupe_factor=10 \
-                            --masked_lm_prob=0.8 
-```
-
-
-#### Step 2: Pre-train BERT4ETH 
+#### Step 1: Pre-train BERT4ETH 
 
 ```sh
 python run_pretrain.py --bizdate=bert4eth_exp \
@@ -108,7 +74,7 @@ python run_pretrain.py --bizdate=bert4eth_exp \
 | `checkpointDir`          | Specify the directory to save the checkpoints.                                     |
 
 
-#### Step 3: Output Representation
+#### Step 2: Output Representation
 
 ```sh
 python output_embed.py --bizdate=bert4eth_exp \
