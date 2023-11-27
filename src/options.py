@@ -10,9 +10,9 @@ parser.add_argument('--mode', type=str, default='train', choices=['train'])
 parser.add_argument('--template', type=str, default=None)
 
 ################
-# Test
+# Output checkpoint dir
 ################
-parser.add_argument('--test_model_path', type=str, default=None)
+parser.add_argument('--ckpt_dir', default="ckpt_1127", type=str)
 
 ################
 # Dataset
@@ -24,10 +24,9 @@ parser.add_argument('--eval_set_size', type=int, default=500,
 ################
 # Dataloader
 ################
-parser.add_argument('--dataloader_code', type=str, default='bert')
 parser.add_argument('--dataloader_random_seed', type=float, default=12345)
-parser.add_argument('--train_batch_size', type=int, default=64)
-
+parser.add_argument('--train_batch_size', type=int, default=256)
+parser.add_argument('--eval_batch_size', type=int, default=1024)
 ################
 # NegativeSampler
 ################
@@ -35,6 +34,7 @@ parser.add_argument('--train_negative_sampler_code', type=str, default='random',
                     help='Method to sample negative items for training. Not used in bert')
 parser.add_argument('--train_negative_sample_size', type=int, default=100)
 parser.add_argument('--train_negative_sampling_seed', type=int, default=None)
+
 
 ################
 # Trainer
@@ -53,7 +53,7 @@ parser.add_argument('--momentum', type=float, default=None, help='SGD momentum')
 parser.add_argument('--decay_step', type=int, default=15, help='Decay step for StepLR')
 parser.add_argument('--gamma', type=float, default=0.1, help='Gamma for StepLR')
 # epochs #
-parser.add_argument('--num_epochs', type=int, default=5, help='Number of epochs for training')
+parser.add_argument('--num_epochs', type=int, default=10, help='Number of epochs for training')
 # logger #
 parser.add_argument('--log_period_as_iter', type=int, default=12800)
 # evaluation #
@@ -88,7 +88,7 @@ parser.add_argument('--do_embed', action='store_true', default=True, help='Wheth
 parser.add_argument('--dupe_factor', type=int, default=10, help='Number of times to duplicate the input data (with different masks).')
 parser.add_argument('--data_dir', type=str, default='./inter_data/', help='data dir.')
 parser.add_argument('--vocab_filename', type=str, default='vocab', help='vocab filename')
-parser.add_argument('--bizdate', type=str, default="local_test", help='the signature of running experiments')
+parser.add_argument('--bizdate', type=str, default="1127", help='the signature of running experiments')
 
 ################
 args = parser.parse_args()

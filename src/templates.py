@@ -4,16 +4,15 @@ def set_template(args):
     #     return
 
     args.mode = 'train'
-    # args.dataset_code = 'ml-' + input('Input 1 for ml-1m, 20 for ml-20m: ') + 'm'
     args.dataloader_code = 'bert'
-    batch = 128
+    batch = 256
     args.train_batch_size = batch
     args.val_batch_size = batch
     args.test_batch_size = batch
 
     args.trainer_code = 'bert'
-    # args.device = 'cuda'
-    args.device = 'cpu'
+    args.device = 'cuda'
+    # args.device = 'cpu'
     args.num_gpu = 1
     args.device_idx = '0'
     args.optimizer = 'Adam'

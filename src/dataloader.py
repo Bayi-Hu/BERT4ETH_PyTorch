@@ -96,102 +96,18 @@ class BERT4ETHDataloader:
         self.rng.shuffle(seqs)
         return seqs
 
-    def get_pytorch_dataloaders(self):
-        train_loader = self._get_train_loader()
-        return train_loader
-
-    def _get_train_loader(self):
+    def get_train_loader(self):
         dataset = BERT4ETHTrainDataset(self.args, self.vocab, self.seq_list)
         dataloader = data_utils.DataLoader(dataset, batch_size=self.args.train_batch_size,
                                            shuffle=True, pin_memory=True)
         return dataloader
 
+    def get_eval_loader(self):
+        dataset = BERT4ETHEvalDataset(self.args, self.vocab, self.seq_list)
+        dataloader = data_utils.DataLoader(dataset, batch_size=self.args.eval_batch_size,
+                                           shuffle=False, pin_memory=True)
 
-class BertDataloader:
-    def __init__(self, args, dataset):
-
-        self.args = args
-        seed = args.dataloader_random_seed
-        self.rng = random.Random(seed)
-        self.save_folder = dataset._get_preprocessed_folder_path()
-        dataset = dataset.load_dataset()
-        self.train = dataset['train']
-        self.umap = dataset['umap']
-        self.smap = dataset['smap']
-        self.user_count = len(self.umap)
-        self.item_count = len(self.smap)
-
-        args.num_items = len(self.smap) # ? can directly set?
-        self.max_len = args.bert_max_len
-        self.mask_prob = args.bert_mask_prob
-        self.CLOZE_MASK_TOKEN = self.item_count + 1
-
-        code = args.train_negative_sampler_code
-
-    @classmethod
-    def code(cls):
-        return 'bert'
-
-    def get_pytorch_dataloaders(self):
-        train_loader = self._get_train_loader()
-        return train_loader
-
-    def _get_train_loader(self):
-        dataset = BertTrainDataset(self.train, self.max_len, self.mask_prob, self.CLOZE_MASK_TOKEN, self.item_count,
-                                   self.rng)
-        dataloader = data_utils.DataLoader(dataset, batch_size=self.args.train_batch_size,
-                                           shuffle=True, pin_memory=True)
         return dataloader
-
-
-class BertTrainDataset(data_utils.Dataset):
-    def __init__(self, u2seq, max_len, mask_prob, mask_token, num_items, rng):
-        self.u2seq = u2seq
-        self.users = sorted(self.u2seq.keys())
-        self.max_len = max_len
-        self.mask_prob = mask_prob
-        self.mask_token = mask_token
-        self.num_items = num_items
-        self.rng = rng
-
-    def __len__(self):
-        return len(self.users)
-
-    def __getitem__(self, index):
-        user = self.users[index]
-        seq = self._getseq(user)
-
-        tokens = []
-        labels = []
-        for s in seq:
-            prob = self.rng.random()
-            if prob < self.mask_prob:
-                prob /= self.mask_prob
-
-                if prob < 0.8:
-                    tokens.append(self.mask_token)
-                elif prob < 0.9:
-                    tokens.append(self.rng.randint(1, self.num_items))
-                else:
-                    tokens.append(s)
-
-                labels.append(s)
-            else:
-                tokens.append(s)
-                labels.append(0)
-
-        tokens = tokens[-self.max_len:]
-        labels = labels[-self.max_len:]
-
-        mask_len = self.max_len - len(tokens)
-
-        tokens = [0] * mask_len + tokens
-        labels = [0] * mask_len + labels
-
-        return torch.LongTensor(tokens), torch.LongTensor(labels)
-
-    def _getseq(self, user):
-        return self.u2seq[user]
 
 
 class BERT4ETHTrainDataset(data_utils.Dataset):
@@ -204,7 +120,6 @@ class BERT4ETHTrainDataset(data_utils.Dataset):
         seed = args.dataloader_random_seed
         self.rng = random.Random(seed)
         self.max_predictions_per_seq = math.ceil(self.args.max_seq_length * self.args.masked_lm_prob)
-
 
     def __len__(self):
         return len(self.seq_list)
@@ -282,52 +197,62 @@ class BERT4ETHTrainDataset(data_utils.Dataset):
                torch.LongTensor(labels)
 
 
+class BERT4ETHEvalDataset(data_utils.Dataset):
 
+    def __init__(self, args, vocab, seq_list):
+        # mask_prob, mask_token, max_predictions_per_seq):
+        self.args = args
+        self.seq_list = seq_list
+        self.vocab = vocab
+        seed = args.dataloader_random_seed
+        self.rng = random.Random(seed)
+    def __len__(self):
+        return len(self.seq_list)
 
+    def __getitem__(self, index):
 
+        # only one index as input
+        tranxs = self.seq_list[index]
+        address = tranxs[0][0]
 
+        # MAP discrete feature to int
+        address = [address]
+        tokens = list(map(lambda x: x[0], tranxs))
+        input_ids = self.vocab.convert_tokens_to_ids(tokens)
 
-# class NegativeSampler(nn.Module):
-#     def __init__(self, args, bert_config, output_weights, vocab):
-#         super().__init__()
-#         self.args = args
-#         self.vocab = vocab
-#         self.vocab_size = len(vocab.vocab_words) - 3
-#         self.output_weights = output_weights
-#         self.dense = nn.Linear(bert_config["hidden_size"], bert_config["hidden_size"])
-#         self.transform_act_fn = F.gelu  # Assuming GELU is used in bert_config.hidden_act
-#         self.LayerNorm = nn.LayerNorm(bert_config["hidden_size"], eps=1e-12)
-#         self.output_bias = nn.Parameter(torch.zeros(self.vocab_size + 1))
-#
-#     def forward(self, input_tensor, positions, label_ids, label_weights):
-#         # Handle negative sampling
-#         neg_ids = self.negative_sample(self.vocab_size, self.args.neg_sample_num)
-#
-#         input_tensor = gather_indexes(input_tensor, positions)
-#
-#         # Transformation
-#         input_tensor = self.dense(input_tensor)
-#         input_tensor = self.transform_act_fn(input_tensor)
-#         input_tensor = self.LayerNorm(input_tensor)
-#
-#         # Get embeddings
-#         label_ids = label_ids.view(-1)
-#         label_weights = label_weights.view(-1)
-#         pos_output_weights = self.output_weights(label_ids)  # Assuming output_weights is a nn.Embedding layer
-#         neg_output_weights = self.output_weights(neg_ids)
-#
-#         # Compute logits
-#         pos_logits = torch.sum(input_tensor * pos_output_weights, dim=-1).unsqueeze(1)
-#         neg_logits = torch.matmul(input_tensor, neg_output_weights.t())
-#
-#         logits = torch.cat([pos_logits, neg_logits], dim=1)
-#         logits += self.output_bias
-#
-#         log_probs = F.log_softmax(logits, dim=-1)
-#         per_example_loss = -log_probs[:, 0]
-#         numerator = torch.sum(label_weights * per_example_loss)
-#         denominator = torch.sum(label_weights) + 1e-5
-#         loss = numerator / denominator
-#
-#         return loss, per_example_loss, log_probs
+        block_timestamps = list(map(lambda x: x[2], tranxs))
+        values = list(map(lambda x: x[3], tranxs))
+        io_flags = list(map(map_io_flag, tranxs))
+        counts = list(map(lambda x: x[5], tranxs))
+        positions = convert_timestamp_to_position(block_timestamps)
+        input_mask = [1] * len(input_ids)
+
+        max_seq_length = self.args.max_seq_length
+
+        assert len(input_ids) <= max_seq_length
+        assert len(counts) <= max_seq_length
+        assert len(values) <= max_seq_length
+        assert len(io_flags) <= max_seq_length
+        assert len(positions) <= max_seq_length
+
+        input_ids += [0] * (max_seq_length - len(input_ids))
+        counts += [0] * (max_seq_length - len(counts))
+        values += [0] * (max_seq_length - len(values))
+        io_flags += [0] * (max_seq_length - len(io_flags))
+        positions += [0] * (max_seq_length - len(positions))
+        input_mask += [0] * (max_seq_length - len(input_mask))
+
+        assert len(input_ids) == max_seq_length
+        assert len(counts) == max_seq_length
+        assert len(values) == max_seq_length
+        assert len(io_flags) == max_seq_length
+        assert len(positions) == max_seq_length
+        assert len(input_mask) == max_seq_length
+
+        return torch.LongTensor(input_ids), \
+               torch.LongTensor(counts), \
+               torch.LongTensor(values), \
+               torch.LongTensor(io_flags), \
+               torch.LongTensor(positions), \
+               torch.LongTensor(input_mask), \
 

@@ -6,3 +6,4 @@ src/experiments/*
 src/inter_data/*
 data/*
 src/__pycache__/*
+./data/*

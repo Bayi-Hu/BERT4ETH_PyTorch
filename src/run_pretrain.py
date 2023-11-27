@@ -28,7 +28,7 @@ def train():
 
     # dataloader
     dataloader = BERT4ETHDataloader(args, vocab, eoa2seq)
-    train_loader = dataloader.get_pytorch_dataloaders()
+    train_loader = dataloader.get_train_loader()
 
     # model
     model = BERT4ETH(args)

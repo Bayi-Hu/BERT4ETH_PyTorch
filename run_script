@@ -1,0 +1,5 @@
+
+module load pytorch/1.12.0
+salloc  -A gts-ll72 -qembers -N1 --gres=gpu:A100:1 --ntasks-per-node=4 -t8:00:00
+
+

@@ -27,14 +27,14 @@ The master branch hosts the basic BERT4ETH model. If you wish to run the basic B
 #### Step 2: Unzip dataset under the directory of "BERT4ETH/Data/" 
 
 ```sh
-cd BERT4ETH/Data; # Labels are already included
+cd BERT4ETH/data; # Labels are already included
 unzip ...;
 ``` 
 
 #### Step 3: Transaction Sequence Generation
 
 ```sh
-cd Model;
+cd src;
 python gen_seq.py --bizdate=bert4eth_exp
 ```
 
