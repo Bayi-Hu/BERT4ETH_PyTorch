@@ -1,3 +1,5 @@
+import numpy as np
+
 from config import STATE_DICT_KEY, OPTIMIZER_STATE_DICT_KEY
 from utils import AverageMeterSet
 import torch
@@ -56,28 +58,23 @@ class BERT4ETHTrainer:
             self.lr_scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=args.decay_step, gamma=args.gamma)
 
         self.num_epochs = args.num_epochs
-        self.metric_ks = args.metric_ks
-        self.best_metric = args.best_metric
 
-        # for loss calculation
+        # Parameters for pre-training task, not related to the model
         self.dense = nn.Linear(args.hidden_size, args.hidden_size).to(self.device)
         self.transform_act_fn = F.gelu
         self.LayerNorm = nn.LayerNorm(args.hidden_size, eps=1e-12).to(self.device)
         # self.bias = torch.nn.Parameter(torch.zeros(logits.shape[-1])).to(self.device)
         # self.output_bias = nn.Parameter(torch.zeros())
 
-    @classmethod
-    def code(cls):
-        return 'bert'
-
     def calculate_loss(self, batch):
-        input_ids = batch[0]
-        counts = batch[1]
-        values = batch[2]
-        io_flags = batch[3]
-        positions = batch[4]
-        input_mask = batch[5]
-        labels = batch[6]
+        address_id = batch[0]
+        input_ids = batch[1]
+        counts = batch[2]
+        values = batch[3]
+        io_flags = batch[4]
+        positions = batch[5]
+        input_mask = batch[6]
+        labels = batch[7]
 
         # seqs, labels = batch
         # h = self.model(input_ids)  # B x T x V
@@ -130,24 +127,51 @@ class BERT4ETHTrainer:
         self.model.eval()
         tqdm_dataloader = tqdm(self.data_loader)
         embedding_list = []
+        address_list = []
         with torch.no_grad():
             for batch_idx, batch in enumerate(tqdm_dataloader):
-                batch_size = batch[0].shape[0]
                 batch = [x.to(self.device) for x in batch]
 
-                input_ids = batch[0]
-                counts = batch[1]
-                values = batch[2]
-                io_flags = batch[3]
-                positions = batch[4]
+                address = batch[0]
+                input_ids = batch[1]
+                counts = batch[2]
+                values = batch[3]
+                io_flags = batch[4]
+                positions = batch[5]
                 h = self.model(input_ids, counts, values, io_flags, positions).to(self.device)
 
                 cls_embedding = h[:,0,:]
                 # mean embedding
                 # mean_embedding = torch.mean(h, dim=1)
                 embedding_list.append(cls_embedding)
+                address_ids = address.squeeze().tolist()
 
-        return torch.cat(embedding_list, dim=0)
+                addresses = self.vocab.convert_ids_to_tokens(address_ids)
+                address_list += addresses
+
+        embedding_list = torch.cat(embedding_list, dim=0)
+        # mean pooling
+        address_to_embedding = {}
+        for i in range(len(address_list)):
+            address = address_list[i]
+            embedding = embedding_list[i]
+            try:
+                address_to_embedding[address].append(embedding.expand(size=[1,-1]))
+            except:
+                address_to_embedding[address] = [embedding.expand(size=[1,-1])]
+
+        embedding_list = []
+        for address, embeds in address_to_embedding.items():
+            address_list.append(address)
+            if len(embeds) > 1:
+                embeds = torch.cat(embeds, dim=0)
+                embedding_list.append(torch.mean(embeds, dim=0).expand(size=[1,-1]))
+            else:
+                embedding_list.append(embeds[0])
+            # final embedding table
+        address_array = np.array(address_list)
+        embedding_array = np.array(torch.cat(embedding_list, dim=0))
+        return address_array, embedding_array
 
     def train_one_epoch(self, epoch, accum_iter):
         self.model.train()
@@ -161,13 +185,11 @@ class BERT4ETHTrainer:
 
             batch_size = batch[0].shape[0]
             batch = [x.to(self.device) for x in batch]
-
             self.optimizer.zero_grad()
             loss = self.calculate_loss(batch)
             loss.backward()
 
             self.optimizer.step()
-
             average_meter_set.update('loss', loss.item())
             tqdm_dataloader.set_description(
                 'Epoch {}, loss {:.3f} '.format(epoch+1, average_meter_set['loss'].avg))
@@ -177,7 +199,7 @@ class BERT4ETHTrainer:
         return accum_iter
 
     def save_model(self, epoch, ckpt_dir):
-        os.makedirs(ckpt_dir)
+        os.makedirs(ckpt_dir, exist_ok=True)
         ckpt_dir = os.path.join(ckpt_dir, "model_" + str(epoch)) + ".pth"
         print("Saving model to:", ckpt_dir)
         torch.save(self.model.state_dict(), ckpt_dir)

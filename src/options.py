@@ -12,7 +12,7 @@ parser.add_argument('--template', type=str, default=None)
 ################
 # Output checkpoint dir
 ################
-parser.add_argument('--ckpt_dir', default="ckpt_1127", type=str)
+parser.add_argument('--ckpt_dir', default="ckpt_1127/model_0.pth", type=str)
 
 ################
 # Dataset
@@ -39,11 +39,8 @@ parser.add_argument('--train_negative_sampling_seed', type=int, default=None)
 ################
 # Trainer
 ################
-parser.add_argument('--trainer_code', type=str, default='bert')
 # device #
 parser.add_argument('--device', type=str, default='cpu', choices=['cpu', 'cuda'])
-parser.add_argument('--num_gpu', type=int, default=1)
-parser.add_argument('--device_idx', type=str, default='0')
 # optimizer #
 parser.add_argument('--optimizer', type=str, default='Adam', choices=['SGD', 'Adam'])
 parser.add_argument('--lr', type=float, default=0.001, help='Learning rate')
@@ -54,11 +51,6 @@ parser.add_argument('--decay_step', type=int, default=15, help='Decay step for S
 parser.add_argument('--gamma', type=float, default=0.1, help='Gamma for StepLR')
 # epochs #
 parser.add_argument('--num_epochs', type=int, default=10, help='Number of epochs for training')
-# logger #
-parser.add_argument('--log_period_as_iter', type=int, default=12800)
-# evaluation #
-parser.add_argument('--metric_ks', nargs='+', type=int, default=[10, 20, 50], help='ks for Metric@k')
-parser.add_argument('--best_metric', type=str, default='NDCG@10', help='Metric for determining the best model')
 
 ################
 # Model
@@ -71,7 +63,6 @@ parser.add_argument('--model_init_seed', type=int, default=54321)
 # parser.add_argument('--bert_num_heads', type=int, default=2, help='Number of heads for multi-attention')
 # parser.add_argument('--bert_dropout', type=float, default=0.2, help='Dropout probability to use throughout the model')
 parser.add_argument('--masked_lm_prob', type=float, default=0.8, help='Masked LM probability.')
-
 parser.add_argument('--neg_sample_num', type=int, default=5000, help='The number of negative samples in a batch')
 parser.add_argument('--neg_strategy', type=str, default="zip", help='Strategy of negative sampling.')
 
@@ -85,10 +76,9 @@ parser.add_argument('--experiment_description', type=str, default='test')
 parser.add_argument('--max_seq_length', type=int, default=100, help='max sequence length.')
 parser.add_argument('--do_eval', action='store_true', help='Whether to do evaluation.')
 parser.add_argument('--do_embed', action='store_true', default=True, help='Whether to do embedding.')
-parser.add_argument('--dupe_factor', type=int, default=10, help='Number of times to duplicate the input data (with different masks).')
 parser.add_argument('--data_dir', type=str, default='./inter_data/', help='data dir.')
 parser.add_argument('--vocab_filename', type=str, default='vocab', help='vocab filename')
-parser.add_argument('--bizdate', type=str, default="1127", help='the signature of running experiments')
+parser.add_argument('--bizdate', type=str, default="local_test", help='the signature of running experiments')
 
 ################
 args = parser.parse_args()

@@ -3,16 +3,11 @@ def set_template(args):
     # if args.template is None:
     #     return
 
-    args.mode = 'train'
-    args.dataloader_code = 'bert'
-    batch = 256
-    args.train_batch_size = batch
-    args.val_batch_size = batch
-    args.test_batch_size = batch
+    args.train_batch_size = 256
+    args.eval_batch_size = 1024
 
-    args.trainer_code = 'bert'
-    args.device = 'cuda'
-    # args.device = 'cpu'
+    # args.device = 'cuda'
+    args.device = 'cpu'
     args.num_gpu = 1
     args.device_idx = '0'
     args.optimizer = 'Adam'
@@ -21,7 +16,6 @@ def set_template(args):
     args.decay_step = 25
     args.gamma = 1.0
     args.num_epochs = 5
-    args.model_code = 'bert'
     args.model_init_seed = 0
 
     # model configuration
@@ -30,7 +24,7 @@ def set_template(args):
     args.initializer_range = 0.02
     args.num_hidden_layers = 2
     args.num_attention_heads = 2
-    args.vocab_size = 300000
+    args.vocab_size = 500000
     args.max_seq_length = 100
     args.hidden_dropout_prob = 0.2
     args.attention_probs_dropout_prob = 0.2

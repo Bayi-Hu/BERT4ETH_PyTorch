@@ -152,8 +152,7 @@ class BERT4ETHTrainDataset(data_utils.Dataset):
             num_masked += 1
 
         # MAP discrete feature to int
-
-        address = [address]
+        address_id = self.vocab.convert_tokens_to_ids([address])
         tokens = list(map(lambda x: x[0], tranxs))
         input_ids = self.vocab.convert_tokens_to_ids(tokens)
 
@@ -188,7 +187,9 @@ class BERT4ETHTrainDataset(data_utils.Dataset):
         assert len(input_mask) == max_seq_length
         assert len(labels) == max_seq_length
 
-        return torch.LongTensor(input_ids), \
+
+        return torch.LongTensor(address_id), \
+               torch.LongTensor(input_ids), \
                torch.LongTensor(counts), \
                torch.LongTensor(values), \
                torch.LongTensor(io_flags), \
@@ -216,7 +217,7 @@ class BERT4ETHEvalDataset(data_utils.Dataset):
         address = tranxs[0][0]
 
         # MAP discrete feature to int
-        address = [address]
+        address_id = self.vocab.convert_tokens_to_ids([address])
         tokens = list(map(lambda x: x[0], tranxs))
         input_ids = self.vocab.convert_tokens_to_ids(tokens)
 
@@ -249,7 +250,8 @@ class BERT4ETHEvalDataset(data_utils.Dataset):
         assert len(positions) == max_seq_length
         assert len(input_mask) == max_seq_length
 
-        return torch.LongTensor(input_ids), \
+        return torch.LongTensor(address_id), \
+               torch.LongTensor(input_ids), \
                torch.LongTensor(counts), \
                torch.LongTensor(values), \
                torch.LongTensor(io_flags), \
