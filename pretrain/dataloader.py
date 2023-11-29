@@ -22,7 +22,6 @@ def map_io_flag(tranxs):
     else:
         return 0
 
-
 def convert_timestamp_to_position(block_timestamps):
     position = [0]
     if len(block_timestamps) <= 1:
@@ -46,10 +45,6 @@ class BERT4ETHDataloader:
         self.eoa2seq = eoa2seq
         self.vocab = vocab
         self.seq_list = self.preprocess(eoa2seq)
-
-    @classmethod
-    def code(cls):
-        return 'bert'
 
     def preprocess(self, eoa2seq):
         self.masked_lm_prob = self.args.masked_lm_prob

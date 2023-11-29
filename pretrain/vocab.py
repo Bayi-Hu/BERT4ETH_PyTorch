@@ -11,10 +11,6 @@ class FreqVocab(object):
     """Runs end-to-end tokenziation."""
 
     def __init__(self):
-        # layout of the  ulary
-        # item_id based on freq
-        # special token
-        # user_id based on nothing
         self.counter = Counter()
         self.frequency = []
 
@@ -28,7 +24,6 @@ class FreqVocab(object):
         self.token_count = len(self.counter.keys())
         self.special_tokens = ["[MASK]", "[pad]", '[NO_USE]']
         self.token_to_ids = {}  # index begin from 1
-        #first items
 
         # first special tokens for frequency factorization
         for token in self.special_tokens:

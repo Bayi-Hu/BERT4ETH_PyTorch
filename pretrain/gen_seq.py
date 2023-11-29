@@ -5,9 +5,9 @@ import functools
 import os
 
 parser = argparse.ArgumentParser(description="Data Processing with PyTorch")
-parser.add_argument("--phisher", type=bool, default=False, help="whether to include phisher detection dataset.")
-parser.add_argument("--deanon", type=bool, default=False, help="whether to include de-anonymization dataset.")
-parser.add_argument("--tornado", type=bool, default=False, help="whether to include tornado dataset.")
+parser.add_argument("--phisher", type=bool, default=True, help="whether to include phisher detection dataset.")
+parser.add_argument("--deanon", type=bool, default=True, help="whether to include de-anonymization dataset.")
+parser.add_argument("--tornado", type=bool, default=True, help="whether to include tornado dataset.")
 parser.add_argument("--data_dir", type=str, default="../data", help="data directory.")
 parser.add_argument("--dataset", type=str, default=None, help="which dataset to use")
 parser.add_argument("--bizdate", type=str, default="local_test", help="the date of running experiments.")
@@ -232,8 +232,8 @@ def feature_bucketization(eoa2seq_agg):
 
 def main():
 
-    f_in = open(os.path.join(args.data_dir, "normal_eoa_transaction_in_slice_100K.csv"), "r")
-    f_out = open(os.path.join(args.data_dir, "normal_eoa_transaction_out_slice_100K.csv"), "r")
+    f_in = open(os.path.join(args.data_dir, "normal_eoa_transaction_in_slice_1000K.csv"), "r")
+    f_out = open(os.path.join(args.data_dir, "normal_eoa_transaction_out_slice_1000K.csv"), "r")
     print("Add normal account transactions.")
     eoa2seq_in, eoa2seq_out = load_data(f_in, f_out)
     if args.dup:

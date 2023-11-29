@@ -1,5 +1,3 @@
-from config import *
-
 import json
 import os
 import pprint as pp
@@ -12,6 +10,9 @@ import torch
 import torch.backends.cudnn as cudnn
 from torch import optim as optim
 
+RAW_DATASET_ROOT_FOLDER = 'Data'
+STATE_DICT_KEY = 'model_state_dict'
+OPTIMIZER_STATE_DICT_KEY = 'optimizer_state_dict'
 
 def setup_train(args):
     set_up_gpu(args)

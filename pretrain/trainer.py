@@ -1,6 +1,4 @@
 import numpy as np
-
-from config import STATE_DICT_KEY, OPTIMIZER_STATE_DICT_KEY
 from utils import AverageMeterSet
 import torch
 import torch.nn as nn
@@ -21,7 +19,7 @@ def negative_sample(neg_strategy, vocab, sample_num):
         weights = 1 / torch.arange(1., word_num + 1)
     elif neg_strategy == "freq":
         # Frequency-based negative sampling
-        weights = torch.tensor(list(map(lambda x: pow(x, 1 / 1), vocab.frequency[:-3])), dtype=torch.float)
+        weights = torch.tensor(list(map(lambda x: pow(x, 1 / 1), vocab.frequency)), dtype=torch.float)
     else:
         raise ValueError("Please select correct negative sampling strategy: uniform, zip, freq.")
 
@@ -48,9 +46,6 @@ class BERT4ETHTrainer:
         self.device = args.device
         self.vocab = vocab
         self.model = model.to(self.device)
-        self.is_parallel = args.num_gpu > 1
-        if self.is_parallel:
-            self.model = nn.DataParallel(self.model)
 
         self.data_loader = data_loader
         self.optimizer = self._create_optimizer()
@@ -115,10 +110,12 @@ class BERT4ETHTrainer:
         return loss
 
     def train(self):
+        assert self.args.ckpt_dir, "must specify the directory for storing checkpoint"
         accum_iter = 0
         for epoch in range(self.num_epochs):
             accum_iter = self.train_one_epoch(epoch, accum_iter)
-            self.save_model(epoch, self.args.ckpt_dir)
+            if epoch % 5 ==0 and epoch>0:
+                self.save_model(epoch, self.args.ckpt_dir)
 
     def load(self, ckpt_dir):
         self.model.load_state_dict(torch.load(ckpt_dir))
@@ -160,6 +157,7 @@ class BERT4ETHTrainer:
             except:
                 address_to_embedding[address] = [embedding.expand(size=[1,-1])]
 
+        address_list = []
         embedding_list = []
         for address, embeds in address_to_embedding.items():
             address_list.append(address)
@@ -169,8 +167,9 @@ class BERT4ETHTrainer:
             else:
                 embedding_list.append(embeds[0])
             # final embedding table
+
         address_array = np.array(address_list)
-        embedding_array = np.array(torch.cat(embedding_list, dim=0))
+        embedding_array = torch.cat(embedding_list, dim=0).cpu().numpy()
         return address_array, embedding_array
 
     def train_one_epoch(self, epoch, accum_iter):
@@ -192,15 +191,16 @@ class BERT4ETHTrainer:
             self.optimizer.step()
             average_meter_set.update('loss', loss.item())
             tqdm_dataloader.set_description(
-                'Epoch {}, loss {:.3f} '.format(epoch+1, average_meter_set['loss'].avg))
+                'Epoch {}, loss {:.3f} '.format(epoch, average_meter_set['loss'].avg))
 
             accum_iter += batch_size
 
         return accum_iter
 
     def save_model(self, epoch, ckpt_dir):
+        print(ckpt_dir)
         os.makedirs(ckpt_dir, exist_ok=True)
-        ckpt_dir = os.path.join(ckpt_dir, "model_" + str(epoch)) + ".pth"
+        ckpt_dir = os.path.join(ckpt_dir, "epoch_" + str(epoch)) + ".pth"
         print("Saving model to:", ckpt_dir)
         torch.save(self.model.state_dict(), ckpt_dir)
 
@@ -212,9 +212,3 @@ class BERT4ETHTrainer:
             return optim.SGD(self.model.parameters(), lr=args.lr, weight_decay=args.weight_decay, momentum=args.momentum)
         else:
             raise ValueError
-
-    def _create_state_dict(self):
-        return {
-            STATE_DICT_KEY: self.model.module.state_dict() if self.is_parallel else self.model.state_dict(),
-            OPTIMIZER_STATE_DICT_KEY: self.optimizer.state_dict(),
-        }

@@ -1,4 +1,4 @@
-from options import args
+from config import args
 from dataloader import BERT4ETHDataloader
 from modeling import BERT4ETH
 from trainer import BERT4ETHTrainer
@@ -39,7 +39,5 @@ def train():
 
 
 if __name__ == '__main__':
-    if args.mode == 'train':
-        train()
-    else:
-        raise ValueError('Invalid mode')
+    train()
+

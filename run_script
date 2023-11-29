@@ -1,5 +1,9 @@
 
 module load pytorch/1.12.0
 salloc  -A gts-ll72 -qembers -N1 --gres=gpu:A100:1 --ntasks-per-node=4 -t8:00:00
+salloc  -A gts-ll72 -qembers -N1 --gres=gpu:A100:1 --ntasks-per-node=4 -t8:00:00
 
+
+python run_pretrain.py --bizdate=exp_test --num_epochs=1
+python run_embed.py --bizdate-=
 
