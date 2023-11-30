@@ -4,7 +4,16 @@ src/gen_pretrain_data.py
 src/Data/*
 src/experiments/*
 src/inter_data/*
-data/*
+data/dean_trans_in_new.csv
+data/dean_trans_out_new.csv
+data/normal_eoa_transaction_in_slice_1000K.csv
+data/normal_eoa_transaction_out_slice_1000K.csv
+data/normal_eoa_transaction_in_slice_100K.csv
+data/normal_eoa_transaction_out_slice_100K.csv
+data/phisher_transaction_in.csv
+data/phisher_transaction_out.csv
+data/tornado_trans_in_removed.csv
+data/tornado_trans_out_removed.csv
 src/__pycache__/*
 ./data/*
 ./src/*

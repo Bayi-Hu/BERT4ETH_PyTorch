@@ -10,7 +10,7 @@ from sklearn.metrics import accuracy_score,precision_score,recall_score,f1_score
 import argparse
 
 parser = argparse.ArgumentParser("phishing_detection")
-parser.add_argument("--input_dir", type=str, default="../outputs/1129_epoch_10", help="the input directory of address and embedding list")
+parser.add_argument("--input_dir", type=str, default="../outputs/1129_epoch_5", help="the input directory of address and embedding list")
 
 args = parser.parse_args()
 

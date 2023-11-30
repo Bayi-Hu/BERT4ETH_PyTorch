@@ -22,7 +22,7 @@ def negative_sample(neg_strategy, vocab, sample_num):
         weights = 1 / torch.arange(1., word_num + 1)
     elif neg_strategy == "freq":
         # Frequency-based negative sampling
-        weights = torch.tensor(list(map(lambda x: pow(x, 1 / 1), vocab.frequency)), dtype=torch.float)
+        weights = torch.tensor(list(map(lambda x: pow(x, 1 / 1), vocab.frequency[4:])), dtype=torch.float)
     else:
         raise ValueError("Please select correct negative sampling strategy: uniform, zip, freq.")
 
@@ -51,23 +51,23 @@ class PyTorchAdamWeightDecayOptimizer(AdamW):
                          eps=epsilon, weight_decay=weight_decay_rate)
 
 
-class BERT4ETHTrainer:
+class BERT4ETHTrainer(nn.Module):
     def __init__(self, args, vocab, model, data_loader):
+        super(BERT4ETHTrainer, self).__init__()
         self.args = args
         self.device = args.device
         self.vocab = vocab
         self.model = model.to(self.device)
 
         self.data_loader = data_loader
-        self.optimizer, self.lr_scheduler = self._create_optimizer()
         self.num_epochs = args.num_epochs
 
         # Parameters for pre-training task, not related to the model
         self.dense = nn.Linear(args.hidden_size, args.hidden_size).to(self.device)
         self.transform_act_fn = F.gelu
         self.LayerNorm = nn.LayerNorm(args.hidden_size, eps=1e-12).to(self.device)
-        # self.bias = torch.nn.Parameter(torch.zeros(logits.shape[-1])).to(self.device)
-        # self.output_bias = nn.Parameter(torch.zeros())
+        # self.custom_bias = torch.nn.Parameter(torch.zeros(1+args.neg_sample_num)).to(self.device)
+        self.optimizer, self.lr_scheduler = self._create_optimizer()
 
     def calculate_loss(self, batch):
         address_id = batch[0]
@@ -104,8 +104,8 @@ class BERT4ETHTrainer:
         neg_logits = torch.matmul(input_tensor, neg_output_weights.t())
 
         logits = torch.cat([pos_logits, neg_logits], dim=2)
-        # print("================")
-        # print(logits.shape)
+        # print(self.bias.shape)
+        # logits = logits + self.custom_bias
 
         log_probs = torch.log_softmax(logits, -1)
         per_example_loss = -log_probs[:,:,0]
@@ -118,10 +118,10 @@ class BERT4ETHTrainer:
 
     def train(self):
         assert self.args.ckpt_dir, "must specify the directory for storing checkpoint"
-        accum_iter = 0
+        accum_step = 0
         for epoch in range(self.num_epochs):
-            accum_iter = self.train_one_epoch(epoch, accum_iter)
-            # if epoch % 5 ==0 and epoch>0:
+            # print("bias:", self.custom_bias[:10])
+            accum_step = self.train_one_epoch(epoch, accum_step)
             if (epoch+1) % 5 == 0 and epoch>0:
                 self.save_model(epoch+1, self.args.ckpt_dir)
 
@@ -180,7 +180,7 @@ class BERT4ETHTrainer:
         embedding_array = torch.cat(embedding_list, dim=0).cpu().numpy()
         return address_array, embedding_array
 
-    def train_one_epoch(self, epoch, accum_iter):
+    def train_one_epoch(self, epoch, accum_step):
         self.model.train()
 
         tqdm_dataloader = tqdm(self.data_loader)
@@ -198,12 +198,11 @@ class BERT4ETHTrainer:
             if self.args.enable_lr_schedule:
                 self.lr_scheduler.step()
 
+            accum_step += 1
             tqdm_dataloader.set_description(
-                'Epoch {}, loss {:.6f} '.format(epoch+1, loss.item()))
+                'Epoch {}, Step {}, loss {:.6f} '.format(epoch+1, accum_step, loss.item()))
 
-            accum_iter += batch_size
-
-        return accum_iter
+        return accum_step
 
     def save_model(self, epoch, ckpt_dir):
         print(ckpt_dir)
@@ -216,9 +215,12 @@ class BERT4ETHTrainer:
         """Creates an optimizer training operation for PyTorch."""
         num_train_steps = self.args.num_train_steps
         num_warmup_steps = self.args.num_warmup_steps
+        # for name, param in self.named_parameters():
+        #     print(name, param.size(), param.dtype)
 
-        optimizer = PyTorchAdamWeightDecayOptimizer(
-            self.model.parameters(),
+        optimizer = PyTorchAdamWeightDecayOptimizer([
+            {"params": self.parameters()}
+        ],
             learning_rate=self.args.lr,
             weight_decay_rate=0.01,
             beta1=0.9,

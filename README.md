@@ -2,7 +2,7 @@
 
 This is the PyTorch implementation for the paper [BERT4ETH: A Pre-trained Transformer for Ethereum Fraud Detection](https://dl.acm.org/doi/abs/10.1145/3543507.3583345), accepted by the ACM Web conference (WWW) 2023.
 
-I finished the first draft and will test the performance soon. 2023/11/17
+I am still testing the performance of code. (2023/11/29)
 
 ## Getting Start
 
@@ -27,7 +27,7 @@ The master branch hosts the basic BERT4ETH model. If you wish to run the basic B
 #### Step 2: Unzip dataset under the directory of "BERT4ETH/Data/" 
 
 ```sh
-cd BERT4ETH/data; # Labels are already included
+cd BERT4ETH_PyTorch/data; # Labels are already included
 unzip ...;
 ``` 
 

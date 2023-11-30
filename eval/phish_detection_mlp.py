@@ -12,7 +12,7 @@ from tqdm import tqdm
 import argparse
 
 parser = argparse.ArgumentParser("phishing_detection")
-parser.add_argument("--input_dir", type=str, default="../outputs/1129_epoch_10", help="the input directory of address and embedding list")
+parser.add_argument("--input_dir", type=str, default="../outputs/1129_epoch_5", help="the input directory of address and embedding list")
 parser.add_argument("--train_batch_size", type=int, default=256, help="the input directory of address and embedding list")
 
 args = parser.parse_args()
@@ -26,7 +26,7 @@ class MLP(nn.Module):
         self.hidden_dim = 256
         self.num_epochs = 2
         self.lr = 5e-4
-        self.device = "cpu"
+        self.device = "cuda"
         self.fc1 = nn.Linear(self.input_dim, self.hidden_dim).to(self.device)
         self.fc2 = nn.Linear(self.hidden_dim, self.hidden_dim).to(self.device)
         self.out_layer = nn.Linear(self.hidden_dim, 2).to(self.device)
