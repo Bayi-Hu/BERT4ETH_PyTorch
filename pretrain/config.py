@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser(description='BERT4ETH')
 parser.add_argument('--dataloader_random_seed', type=float, default=12345)
 parser.add_argument('--train_batch_size', type=int, default=256)
 parser.add_argument('--eval_batch_size', type=int, default=1024)
-parser.add_argument('--ckpt_dir', default=None, type=str)
+parser.add_argument('--ckpt_dir', default="cpkt_local", type=str)
 parser.add_argument('--data_dir', type=str, default='../outputs/', help='data dir.')
 parser.add_argument('--vocab_filename', type=str, default='vocab', help='vocab filename')
 ################
@@ -16,11 +16,9 @@ parser.add_argument('--vocab_filename', type=str, default='vocab', help='vocab f
 ################
 parser.add_argument('--device', type=str, default='cuda', choices=['cpu', 'cuda'])
 parser.add_argument('--optimizer', type=str, default='Adam', choices=['SGD', 'Adam'])
-parser.add_argument('--lr', type=float, default=0.001, help='Learning rate')
-parser.add_argument('--weight_decay', type=float, default=0, help='l2 regularization')
-parser.add_argument('--momentum', type=float, default=None, help='SGD momentum')
-parser.add_argument('--decay_step', type=int, default=15, help='Decay step for StepLR')
-parser.add_argument('--gamma', type=float, default=0.1, help='Gamma for StepLR')
+parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
+parser.add_argument('--num_train_steps', default=1000000)
+parser.add_argument('--num_warmup_steps', default=100)
 parser.add_argument('--num_epochs', type=int, help='Number of epochs for training')
 ################
 # Model
@@ -39,7 +37,7 @@ def set_template(args):
     args.enable_lr_schedule = True
     args.decay_step = 25
     args.gamma = 1.0
-    args.num_epochs = 10
+    args.num_epochs = 50
     args.model_init_seed = 0
 
     # model configuration
@@ -57,3 +55,13 @@ def set_template(args):
     args.sliding_step = round(args.max_seq_length * 0.6)
 
 set_template(args)
+
+print("==========Hyper-parameters============")
+print("Epoch #:", args.num_epochs)
+print("Vocab #:", args.vocab_size)
+print("Hidden #:", args.hidden_size)
+print("Max Length:", args.max_seq_length)
+print("ckpt_dir:", args.ckpt_dir)
+print("learning_rate:", args.lr)
+print("Max predictions per seq:", args.max_predictions_per_seq)
+

@@ -3,10 +3,13 @@ from utils import AverageMeterSet
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.optim import AdamW
 from torch.distributions import Categorical
 from tqdm import tqdm
 import torch.nn.functional as F
 import os
+from torch.nn.utils import clip_grad_norm_
+
 
 def negative_sample(neg_strategy, vocab, sample_num):
 
@@ -39,6 +42,14 @@ def gather_indexes(sequence_tensor, positions):
     output_tensor = flat_sequence_tensor.index_select(0, flat_positions)
     return output_tensor
 
+class PyTorchAdamWeightDecayOptimizer(AdamW):
+    """A basic Adam optimizer that includes L2 weight decay for PyTorch."""
+    def __init__(self, params, learning_rate, weight_decay_rate=0.01,
+                 beta1=0.9, beta2=0.999, epsilon=1e-6):
+        """Constructs a AdamWeightDecayOptimizer for PyTorch."""
+        super().__init__(params, lr=learning_rate, betas=(beta1, beta2),
+                         eps=epsilon, weight_decay=weight_decay_rate)
+
 
 class BERT4ETHTrainer:
     def __init__(self, args, vocab, model, data_loader):
@@ -48,10 +59,7 @@ class BERT4ETHTrainer:
         self.model = model.to(self.device)
 
         self.data_loader = data_loader
-        self.optimizer = self._create_optimizer()
-        if args.enable_lr_schedule:
-            self.lr_scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=args.decay_step, gamma=args.gamma)
-
+        self.optimizer, self.lr_scheduler = self._create_optimizer()
         self.num_epochs = args.num_epochs
 
         # Parameters for pre-training task, not related to the model
@@ -80,7 +88,6 @@ class BERT4ETHTrainer:
         input_tensor = self.dense(h)
         input_tensor = self.transform_act_fn(input_tensor)
         input_tensor = self.LayerNorm(input_tensor)
-
 
         neg_ids = negative_sample(self.args.neg_strategy,
                                   self.vocab,
@@ -114,8 +121,9 @@ class BERT4ETHTrainer:
         accum_iter = 0
         for epoch in range(self.num_epochs):
             accum_iter = self.train_one_epoch(epoch, accum_iter)
-            if epoch % 5 ==0 and epoch>0:
-                self.save_model(epoch, self.args.ckpt_dir)
+            # if epoch % 5 ==0 and epoch>0:
+            if (epoch+1) % 5 == 0 and epoch>0:
+                self.save_model(epoch+1, self.args.ckpt_dir)
 
     def load(self, ckpt_dir):
         self.model.load_state_dict(torch.load(ckpt_dir))
@@ -174,10 +182,7 @@ class BERT4ETHTrainer:
 
     def train_one_epoch(self, epoch, accum_iter):
         self.model.train()
-        if self.args.enable_lr_schedule:
-            self.lr_scheduler.step()
 
-        average_meter_set = AverageMeterSet()
         tqdm_dataloader = tqdm(self.data_loader)
 
         for batch_idx, batch in enumerate(tqdm_dataloader):
@@ -187,11 +192,14 @@ class BERT4ETHTrainer:
             self.optimizer.zero_grad()
             loss = self.calculate_loss(batch)
             loss.backward()
+            clip_grad_norm_(self.model.parameters(), 5.0)  # Clip gradients
 
             self.optimizer.step()
-            average_meter_set.update('loss', loss.item())
+            if self.args.enable_lr_schedule:
+                self.lr_scheduler.step()
+
             tqdm_dataloader.set_description(
-                'Epoch {}, loss {:.3f} '.format(epoch, average_meter_set['loss'].avg))
+                'Epoch {}, loss {:.6f} '.format(epoch+1, loss.item()))
 
             accum_iter += batch_size
 
@@ -205,10 +213,24 @@ class BERT4ETHTrainer:
         torch.save(self.model.state_dict(), ckpt_dir)
 
     def _create_optimizer(self):
-        args = self.args
-        if args.optimizer.lower() == 'adam':
-            return optim.Adam(self.model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-        elif args.optimizer.lower() == 'sgd':
-            return optim.SGD(self.model.parameters(), lr=args.lr, weight_decay=args.weight_decay, momentum=args.momentum)
-        else:
-            raise ValueError
+        """Creates an optimizer training operation for PyTorch."""
+        num_train_steps = self.args.num_train_steps
+        num_warmup_steps = self.args.num_warmup_steps
+
+        optimizer = PyTorchAdamWeightDecayOptimizer(
+            self.model.parameters(),
+            learning_rate=self.args.lr,
+            weight_decay_rate=0.01,
+            beta1=0.9,
+            beta2=0.999,
+            epsilon=1e-6
+        )
+
+        # Implement linear warmup and decay
+        lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer,
+                                                      lambda step: min((step + 1) / num_warmup_steps, 1.0)
+                                                      if step < num_warmup_steps else (num_train_steps - step) / (
+                                                                  num_train_steps - num_warmup_steps))
+
+        return optimizer, lr_scheduler
+

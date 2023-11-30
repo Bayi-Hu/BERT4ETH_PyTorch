@@ -12,7 +12,7 @@ from tqdm import tqdm
 import argparse
 
 parser = argparse.ArgumentParser("phishing_detection")
-parser.add_argument("--input_dir", type=str, default=None, help="the input directory of address and embedding list")
+parser.add_argument("--input_dir", type=str, default="../outputs/1129_epoch_10", help="the input directory of address and embedding list")
 parser.add_argument("--train_batch_size", type=int, default=256, help="the input directory of address and embedding list")
 
 args = parser.parse_args()
@@ -24,9 +24,9 @@ class MLP(nn.Module):
         self.dataloader = dataloader
         self.input_dim = 64
         self.hidden_dim = 256
-        self.num_epochs = 1
+        self.num_epochs = 2
         self.lr = 5e-4
-        self.device = "cuda"
+        self.device = "cpu"
         self.fc1 = nn.Linear(self.input_dim, self.hidden_dim).to(self.device)
         self.fc2 = nn.Linear(self.hidden_dim, self.hidden_dim).to(self.device)
         self.out_layer = nn.Linear(self.hidden_dim, 2).to(self.device)
@@ -66,7 +66,9 @@ class MLP(nn.Module):
         return
     def predict_proba(self, X_test):
         X_test = torch.tensor(X_test).to(self.device)
-        y_test = self.forward(X_test)[:,1].detach().cpu().numpy()
+        logits = self.forward(X_test)
+        y_test = torch.softmax(logits, dim=1)[:,1].detach().cpu().numpy()
+
         return y_test
 
 

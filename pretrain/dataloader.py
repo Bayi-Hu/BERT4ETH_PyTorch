@@ -3,6 +3,7 @@ import torch
 import math
 import random
 import torch.utils.data as data_utils
+import copy
 
 
 def map_io_flag(tranxs):
@@ -40,7 +41,8 @@ class BERT4ETHDataloader:
 
     def preprocess(self, eoa2seq):
         self.masked_lm_prob = self.args.masked_lm_prob
-        self.rng = random.Random(self.args.dataloader_random_seed)
+        # self.rng = random.Random(self.args.dataloader_random_seed)
+        self.rng = random.Random()
         self.sliding_step = round(self.args.max_seq_length * 0.6)
 
         # preprocess
@@ -105,7 +107,8 @@ class BERT4ETHTrainDataset(data_utils.Dataset):
         self.seq_list = seq_list
         self.vocab = vocab
         seed = args.dataloader_random_seed
-        self.rng = random.Random(seed)
+        # self.rng = random.Random(seed)
+        self.rng = random.Random()
         self.max_predictions_per_seq = math.ceil(self.args.max_seq_length * self.args.masked_lm_prob)
 
     def __len__(self):
@@ -114,7 +117,7 @@ class BERT4ETHTrainDataset(data_utils.Dataset):
     def __getitem__(self, index):
 
         # only one index as input
-        tranxs = self.seq_list[index]
+        tranxs = copy.deepcopy(self.seq_list[index])
         address = tranxs[0][0]
         cand_indexes = []
         for (i, token) in enumerate(tranxs):
@@ -128,14 +131,14 @@ class BERT4ETHTrainDataset(data_utils.Dataset):
         covered_indexes = set()
         labels = [-1 for i in range(len(tranxs))] # labels = -1 denotes not masked.
 
-        for index in cand_indexes:
+        for idx in cand_indexes:
             if num_masked >= num_to_predict:
                 break
-            if index in covered_indexes:
+            if idx in covered_indexes:
                 continue
-            covered_indexes.add(index)
-            labels[index] = self.vocab.convert_tokens_to_ids([tranxs[index][0]])[0]
-            tranxs[index][0] = "[MASK]"
+            covered_indexes.add(idx)
+            labels[idx] = self.vocab.convert_tokens_to_ids([tranxs[idx][0]])[0]
+            tranxs[idx][0] = "[MASK]"
             num_masked += 1
 
         # MAP discrete feature to int
