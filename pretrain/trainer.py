@@ -10,23 +10,7 @@ import torch.nn.functional as F
 import os
 from torch.nn.utils import clip_grad_norm_
 
-
-def negative_sample(neg_strategy, vocab, sample_num):
-
-    word_num = len(vocab.vocab_words) - 3
-    if neg_strategy == "uniform":
-        # Uniform negative sampling
-        weights = torch.ones(word_num)
-    elif neg_strategy == "zip":
-        # Log-uniform (Zipfian) negative sampling
-        weights = 1 / torch.arange(1., word_num + 1)
-    elif neg_strategy == "freq":
-        # Frequency-based negative sampling
-        weights = torch.tensor(list(map(lambda x: pow(x, 1 / 1), vocab.frequency[4:])), dtype=torch.float)
-    else:
-        raise ValueError("Please select correct negative sampling strategy: uniform, zip, freq.")
-
-    sampler = Categorical(weights)
+def negative_sample(sampler, sample_num):
     neg_ids = sampler.sample((sample_num,))
     return neg_ids + 1 + 3
 
@@ -66,8 +50,18 @@ class BERT4ETHTrainer(nn.Module):
         self.dense = nn.Linear(args.hidden_size, args.hidden_size).to(self.device)
         self.transform_act_fn = F.gelu
         self.LayerNorm = nn.LayerNorm(args.hidden_size, eps=1e-12).to(self.device)
-        # self.custom_bias = torch.nn.Parameter(torch.zeros(1+args.neg_sample_num)).to(self.device)
+        # self.output_bias = torch.nn.Parameter(torch.zeros(1+args.neg_sample_num, device=self.device))
         self.optimizer, self.lr_scheduler = self._create_optimizer()
+
+        word_num = len(vocab.vocab_words) - 3
+        if args.neg_strategy == "uniform":
+            self.weights = torch.ones(word_num)
+        elif args.neg_strategy == "zip": # Log-uniform (Zipfian) negative sampling
+            self.weights = 1 / torch.arange(1., word_num + 1)
+        elif args.neg_strategy == "freq": # Frequency-based negative sampling
+            self.weights = torch.tensor(list(map(lambda x: pow(x, 1 / 1), vocab.frequency[4:])), dtype=torch.float)
+        else:
+            raise ValueError("Please select correct negative sampling strategy: uniform, zip, freq.")
 
     def calculate_loss(self, batch):
         address_id = batch[0]
@@ -79,19 +73,14 @@ class BERT4ETHTrainer(nn.Module):
         input_mask = batch[6]
         labels = batch[7]
 
-        # seqs, labels = batch
-        # h = self.model(input_ids)  # B x T x V
-        h = self.model(input_ids, counts, values, io_flags, positions).to(self.device)
-        # here forward we should also include other features.
+        h = self.model(input_ids, counts, values, io_flags, positions).to(self.device) # B x T x V
 
         # Transformation
         input_tensor = self.dense(h)
         input_tensor = self.transform_act_fn(input_tensor)
         input_tensor = self.LayerNorm(input_tensor)
 
-        neg_ids = negative_sample(self.args.neg_strategy,
-                                  self.vocab,
-                                  self.args.neg_sample_num).to(self.device)
+        neg_ids = torch.multinomial(self.weights, self.args.neg_sample_num, replacement=False).to(self.device)
 
         # labels = labels.view(-1)
         label_mask = torch.where(labels > 0, 1, 0)
@@ -104,8 +93,7 @@ class BERT4ETHTrainer(nn.Module):
         neg_logits = torch.matmul(input_tensor, neg_output_weights.t())
 
         logits = torch.cat([pos_logits, neg_logits], dim=2)
-        # print(self.bias.shape)
-        # logits = logits + self.custom_bias
+        # logits = logits + self.output_bias
 
         log_probs = torch.log_softmax(logits, -1)
         per_example_loss = -log_probs[:,:,0]
@@ -120,9 +108,9 @@ class BERT4ETHTrainer(nn.Module):
         assert self.args.ckpt_dir, "must specify the directory for storing checkpoint"
         accum_step = 0
         for epoch in range(self.num_epochs):
-            # print("bias:", self.custom_bias[:10])
+            # print("bias:", self.output_bias[:10])
             accum_step = self.train_one_epoch(epoch, accum_step)
-            if (epoch+1) % 5 == 0 and epoch>0:
+            if (epoch+1) % 5 == 0 or epoch==0:
                 self.save_model(epoch+1, self.args.ckpt_dir)
 
     def load(self, ckpt_dir):
@@ -215,8 +203,8 @@ class BERT4ETHTrainer(nn.Module):
         """Creates an optimizer training operation for PyTorch."""
         num_train_steps = self.args.num_train_steps
         num_warmup_steps = self.args.num_warmup_steps
-        # for name, param in self.named_parameters():
-        #     print(name, param.size(), param.dtype)
+        for name, param in self.named_parameters():
+            print(name, param.size(), param.dtype)
 
         optimizer = PyTorchAdamWeightDecayOptimizer([
             {"params": self.parameters()}

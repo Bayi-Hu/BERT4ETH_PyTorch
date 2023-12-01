@@ -24,7 +24,7 @@ class SegmentEmbedding(nn.Embedding):
 class TokenEmbedding(nn.Embedding):
     def __init__(self, vocab_size, embed_size=512):
         super().__init__(vocab_size, embed_size, padding_idx=0)
-
+        self.weight.data.uniform_(-0.02, 0.02) # set initialization range
 
 class BERTEmbedding(nn.Module):
     """
@@ -49,6 +49,7 @@ class BERTEmbedding(nn.Module):
         self.count_embed = TokenEmbedding(vocab_size=15, embed_size=args.hidden_size)
         self.position_embed = TokenEmbedding(vocab_size=args.max_seq_length , embed_size=args.hidden_size)
         self.io_embed = TokenEmbedding(vocab_size=3, embed_size=args.hidden_size)
+
         self.dropout = nn.Dropout(p=args.hidden_dropout_prob)
 
     def forward(self, input_ids, counts, values, io_flags, positions):
