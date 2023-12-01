@@ -17,3 +17,4 @@ data/tornado_trans_out_removed.csv
 src/__pycache__/*
 ./data/*
 ./src/*
+./outputs/*

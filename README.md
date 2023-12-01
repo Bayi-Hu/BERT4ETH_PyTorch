@@ -2,11 +2,15 @@
 
 This is the PyTorch implementation for the paper [BERT4ETH: A Pre-trained Transformer for Ethereum Fraud Detection](https://dl.acm.org/doi/abs/10.1145/3543507.3583345), accepted by the ACM Web conference (WWW) 2023.
 
-I am still testing the performance of code. (2023/11/29)
+I have recovered the experiment results and am doing final check. (2023/11/29)
+
+If you find this repository useful, please give us a star and cite our paper : ) Thank you!
 
 ## Getting Start
 
 ### Requirements
+
+PyTorch > 1.12.0
 
 ### Preprocess dataset 
 
@@ -22,7 +26,6 @@ I am still testing the performance of code. (2023/11/29)
 
 * [ERC-20 Log Dataset (all in one)](https://drive.google.com/file/d/1mB2Tf7tMq5ApKKOVdctaTh2UZzzrAVxq/view?usp=sharing)
 
-The master branch hosts the basic BERT4ETH model. If you wish to run the basic BERT4ETH model, there is no need to download the ERC-20 log dataset. Advanced features such as In/out separation and ERC20 log can be found in the old branch.
 
 #### Step 2: Unzip dataset under the directory of "BERT4ETH/Data/" 
 
@@ -31,7 +34,10 @@ cd BERT4ETH_PyTorch/data; # Labels are already included
 unzip ...;
 ``` 
 
-#### Step 3: Transaction Sequence Generation
+### Pre-training
+
+
+#### Step 1: Transaction Sequence Generation
 
 ```sh
 cd src;
@@ -39,61 +45,26 @@ python gen_seq.py --bizdate=bert4eth_exp
 ```
 
 
-### Pre-training
-
-#### Step 1: Pre-train BERT4ETH 
+#### Step 2: Pre-train BERT4ETH 
 
 ```sh
-python run_pretrain.py --bizdate=bert4eth_exp \
-                       --max_seq_length=100 \
-                       --epoch=5 \
-                       --batch_size=256 \
-                       --learning_rate=1e-4 \
-                       --num_train_steps=1000000 \
-                       --save_checkpoints_steps=8000 \
-                       --neg_strategy=zip \
-                       --neg_sample_num=5000 \ 
-                       --neg_share=True \ 
-                       --checkpointDir=bert4eth_exp 
+python run_pretrain.py --bizdate="bert4eth_exp" \
+                       --ckpt_dir="bert4eth_exp"
 ```
 
-
-| Parameter                | Description                                                                        |
-|--------------------------|------------------------------------------------------------------------------------|
-| `bizdate`                | The signature for this experiment run.                                             |
-| `max_seq_length`         | The maximum length of BERT4ETH.                                                    |
-| `masked_lm_prob`         | The probability of masking an address.                                             |
-| `epochs`                 | Number of training epochs, default = `5`.                                          |
-| `batch_size`             | Batch size, default = `256`.                                                       |
-| `learning_rate`          | Learning rate for the optimizer (Adam), default = `1e-4`.                          |
-| `num_train_steps`        | The maximum number of training steps, default = `1000000`,                         |
-| `save_checkpoints_steps` | The parameter controlling the step of saving checkpoints, default = `8000`.        |
-| `neg_strategy`           | Strategy for negative sampling, default `zip`, options (`uniform`, `zip`, `freq`). |
-| `neg_share`              | Whether enable in-batch sharing strategy, default = `True`.                        |
-| `neg_sample_num`         | The negative sampling number for one batch, default = `5000`.                      |
-| `checkpointDir`          | Specify the directory to save the checkpoints.                                     |
-
-
-#### Step 2: Output Representation
+#### Step 3: Output Representation
 
 ```sh
-python output_embed.py --bizdate=bert4eth_exp \
-                       --init_checkpoint=bert4eth_exp/model_104000 \
-                       --max_seq_length=100 \
-                       --neg_sample_num=5000 \
-                       --neg_strategy=zip \
-                       --neg_share=True
+python run_embed.py --bizdate="bert4eth_exp" \
+                       --init_checkpoint="bert4eth_exp/xxx.pth"
 ```
 
-I have generated a version of [embedding file](https://drive.google.com/file/d/1mQgO1LalWhjeR064VhPRmkLl_ztSTroW/view?usp=sharing), you can unzip it under the directory of "Model/inter_data/" and test the results.
-
-### Testing on output account representation
+### Evaluation 
 
 #### Phishing Account Detection
 ```sh
-python run_phishing_detection.py --init_checkpoint=bert4eth_exp/model_104000 # Random Forest (RF)
-
-python run_phishing_detection_dnn.py --init_checkpoint=bert4eth_exp/model_104000 # DNN, better than RF
+cd eval
+python phish_detection_mlp.py --input_dir="../outputs/xxx"
 ```
 
 #### De-anonymization (ENS dataset)
@@ -103,36 +74,17 @@ python run_dean_ENS.py --metric=euclidean \
                        --init_checkpoint=bert4eth_exp/model_104000
 ```
 
-<!-- 
-#### De-anonymization (Tornado Cash)
-
-```sh
-
-python run_dean_Tornado.py --metric=euclidean \
-
-                           --init_checkpoint=bert4eth_exp/model_104000
-
-```
--->
 
 ### Fine-tuning for phishing account detection
 ```sh
-
-python gen_finetune_phisher_data.py --bizdate=bert4eth_exp \ 
-                                    --max_seq_length=100 
+  Will update later..
 ```
 
-```sh
-python run_finetune_phisher.py --init_checkpoint=bert4eth_exp/model_104000 \
-                               --bizdate=bert4eth_exp \ 
-                               --max_seq_length=100 \ 
-                               --checkpointDir=tmp
-```
+
 
 -----
 ## Citation
 
-If you find this repository useful, please give us a star and cite our paper : ) Thank you!
 ```
 @inproceedings{hu2023bert4eth,
   title={BERT4ETH: A Pre-trained Transformer for Ethereum Fraud Detection},
