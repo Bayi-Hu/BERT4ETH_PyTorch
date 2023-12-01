@@ -10,8 +10,7 @@ from sklearn.metrics import accuracy_score,precision_score,recall_score,f1_score
 import argparse
 
 parser = argparse.ArgumentParser("phishing_detection")
-parser.add_argument("--input_dir", type=str, default="../outputs/1129_epoch_5", help="the input directory of address and embedding list")
-
+parser.add_argument("--input_dir", type=str, default="../outputs/1130_epoch_20", help="the input directory of address and embedding list")
 args = parser.parse_args()
 
 
@@ -40,7 +39,7 @@ def main():
     print(X_train.shape)
     print(X_test.shape)
 
-    model = RandomForestClassifier(n_estimators=50, criterion='entropy', random_state=0)
+    model = RandomForestClassifier(n_estimators=200, criterion='entropy', random_state=0)
     model.fit(X_train, y_train)
 
     y_test_proba = model.predict_proba(X_test)[:, 1]

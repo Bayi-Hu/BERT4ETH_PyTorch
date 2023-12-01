@@ -8,7 +8,7 @@ with open("../data/phisher_account.txt", "r") as f:
     for line in f.readlines():
         phisher_account_set.add(line[:-1])
 
-input_dir = "../outputs/1129_epoch_5"
+input_dir = "../outputs/1130_epoch_20"
 
 address_input_dir = os.path.join(input_dir, "address.npy")
 embed_input_dir = os.path.join(input_dir, "embedding.npy")

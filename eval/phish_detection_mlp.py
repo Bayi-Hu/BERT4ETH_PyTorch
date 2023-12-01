@@ -12,7 +12,7 @@ from tqdm import tqdm
 import argparse
 
 parser = argparse.ArgumentParser("phishing_detection")
-parser.add_argument("--input_dir", type=str, default="../outputs/1129_epoch_5", help="the input directory of address and embedding list")
+parser.add_argument("--input_dir", type=str, default="../outputs/1130_epoch_50", help="the input directory of address and embedding list")
 parser.add_argument("--train_batch_size", type=int, default=256, help="the input directory of address and embedding list")
 
 args = parser.parse_args()
@@ -120,7 +120,7 @@ def main():
     y_test_proba = model.predict_proba(X_test)
     print(y_test_proba.shape)
 
-    for threshold in [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4]:
+    for threshold in [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7]:
         print("threshold =", threshold)
         y_pred = np.zeros_like(y_test_proba)
         y_pred[np.where(np.array(y_test_proba) >= threshold)[0]] = 1
