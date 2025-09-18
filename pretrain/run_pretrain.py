@@ -1,10 +1,11 @@
 from config import args
 from dataloader import BERT4ETHDataloader
-from modeling import BERT4ETH
+from models.model import BERT4ETH
 from trainer import BERT4ETHTrainer
 import pickle as pkl
 from vocab import FreqVocab
 
+args.bizdate= 'gas'
 
 def train():
 
@@ -33,7 +34,7 @@ def train():
     # model
     model = BERT4ETH(args)
 
-    # tranier
+    # trainer
     trainer = BERT4ETHTrainer(args, vocab, model, train_loader)
     trainer.train()
 

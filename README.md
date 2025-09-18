@@ -1,8 +1,8 @@
 # BERT4ETH (PyTorch Version)
 
-This is the PyTorch implementation for the paper [BERT4ETH: A Pre-trained Transformer for Ethereum Fraud Detection](https://dl.acm.org/doi/abs/10.1145/3543507.3583345). 
+This is the PyTorch implementation for the paper [BERT4ETH: A Pre-trained Transformer for Ethereum Fraud Detection](https://dl.acm.org/doi/abs/10.1145/3543507.3583345), accepted by the ACM Web conference (WWW) 2023.
 
-The implementation of phish_finetune.py is finished by Qiustander (https://github.com/Qiustander/BERT4ETH_Pytorch). Thanks!
+The implementation of fine-tuning on phishing data was finished by Qiustander (https://github.com/Qiustander). Thanks a lot!
 
 If you find this repository useful, please give us a star and cite our paper : ) Thank you!
 
@@ -76,13 +76,10 @@ python run_dean_ENS.py --metric=euclidean \
 
 
 ### Fine-tuning for phishing account detection
+```sh
+  Will update later..
 ```
-python phish_finetune.py
-```
-#### Evaluation 
-```
-python finetune_test.py 
-```
+
 
 
 -----

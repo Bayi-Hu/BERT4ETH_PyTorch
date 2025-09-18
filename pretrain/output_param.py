@@ -1,10 +1,9 @@
 from config import args
 from dataloader import BERT4ETHDataloader
-from modeling import BERT4ETH
+from models.model import BERT4ETH
 from trainer import BERT4ETHTrainer
 import pickle as pkl
-import numpy as np
-import os
+
 
 def infer_embed():
 

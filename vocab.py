@@ -31,6 +31,7 @@ class FreqVocab(object):
 
         # then normal item
         for token, count in self.counter.most_common():
+            # shit codes
             self.token_to_ids[token] = len(self.token_to_ids) + 1
 
         # add count

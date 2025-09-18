@@ -6,10 +6,10 @@ parser = argparse.ArgumentParser(description='BERT4ETH')
 # Dataloader
 ################
 parser.add_argument('--dataloader_random_seed', type=float, default=12345)
-parser.add_argument('--train_batch_size', type=int, default=256)
+parser.add_argument('--train_batch_size', type=int, default=512)
 parser.add_argument('--eval_batch_size', type=int, default=1024)
-parser.add_argument('--ckpt_dir', default="cpkt_local", type=str)
-parser.add_argument('--data_dir', type=str, default='../outputs/', help='data dir.')
+parser.add_argument('--ckpt_dir', default="outputs/cpkt_local", type=str)
+parser.add_argument('--data_dir', type=str, default='inter_data/', help='data dir.')
 parser.add_argument('--vocab_filename', type=str, default='vocab', help='vocab filename')
 ################
 # Trainer
@@ -28,16 +28,18 @@ parser.add_argument('--masked_lm_prob', type=float, default=0.8, help='Masked LM
 parser.add_argument('--neg_sample_num', type=int, default=5000, help='The number of negative samples in a batch')
 parser.add_argument('--neg_strategy', type=str, default="zip", help='Strategy of negative sampling.')
 parser.add_argument('--max_seq_length', type=int, default=100, help='max sequence length.')
-parser.add_argument('--bizdate', type=str, default=None, help='the signature of running experiments')
-parser.add_argument('--init_checkpoint', type=str, help='the directory name of checkpoint')
+parser.add_argument('--init_checkpoint', type=str, default="bert4eth_exp/embed.pth", help='the directory name of checkpoint')
+parser.add_argument('--bizdate', type=str, default= '2024', help='the date')
+parser.add_argument('--pre_train_ckpt_dir', type=str, default='outputs/cpkt_local', help='pretrain ckpt for finetune')
+
 ################
-args = parser.parse_args()
+args = parser.parse_args([])
 
 def set_template(args):
     args.enable_lr_schedule = True
     args.decay_step = 25
     args.gamma = 1.0
-    args.num_epochs = 50
+    args.num_epochs = 100
     args.model_init_seed = 0
 
     # model configuration
