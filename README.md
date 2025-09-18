@@ -76,10 +76,13 @@ python run_dean_ENS.py --metric=euclidean \
 
 
 ### Fine-tuning for phishing account detection
-```sh
-  Will update later..
 ```
-
+python phish_finetune.py
+```
+#### Evaluation 
+```
+python finetune_test.py 
+```
 
 
 -----
