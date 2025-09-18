@@ -1,8 +1,8 @@
 # BERT4ETH (PyTorch Version)
 
-This is the PyTorch implementation for the paper [BERT4ETH: A Pre-trained Transformer for Ethereum Fraud Detection](https://dl.acm.org/doi/abs/10.1145/3543507.3583345), accepted by the ACM Web conference (WWW) 2023.
+This is the PyTorch implementation for the paper [BERT4ETH: A Pre-trained Transformer for Ethereum Fraud Detection](https://dl.acm.org/doi/abs/10.1145/3543507.3583345). 
 
-I have recovered the experiment results and am doing final check. (2023/11/29)
+The implementation of phish_finetune.py is finished by Qiustander (https://github.com/Qiustander/BERT4ETH_Pytorch). Thanks!
 
 If you find this repository useful, please give us a star and cite our paper : ) Thank you!
 
