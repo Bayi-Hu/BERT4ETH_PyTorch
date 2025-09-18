@@ -1,23 +1,36 @@
 import numpy as np
 import os
-import matplotlib.pyplot as plt
-from sklearn.manifold import TSNE
+from models.model import  MLP
+import torch
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.metrics import accuracy_score,precision_score,recall_score,f1_score, roc_curve, auc, precision_recall_curve
-
+import torch.utils.data as data_utils
 import argparse
 
 parser = argparse.ArgumentParser("phishing_detection")
-parser.add_argument("--input_dir", type=str, default="../outputs/1130_epoch_20", help="the input directory of address and embedding list")
+parser.add_argument("--input_dir", type=str, default="inter_data/bert4eth_exp_embed", help="the input directory of address and embedding list")
+parser.add_argument("--train_batch_size", type=int, default=256, help="the input directory of address and embedding list")
+
 args = parser.parse_args()
+
+
+class TrainDataset(data_utils.Dataset):
+    def __init__(self, X, y):
+        self.X = X
+        self.y = y
+
+    def __len__(self):
+        return len(self.y)
+    def __getitem__(self, index):
+        X_batch = self.X[index]
+        y_batch = self.y[index]
+        return X_batch, y_batch
 
 
 def main():
 
     phisher_account_set = set()
-    with open("../data/phisher_account.txt", "r") as f:
+    with open("data/phisher_account.txt", "r") as f:
         for line in f.readlines():
             phisher_account_set.add(line[:-1])
 
@@ -38,22 +51,18 @@ def main():
 
     print(X_train.shape)
     print(X_test.shape)
+    # define dataset
+    dataset = TrainDataset(X_train, y_train)
+    dataloader = data_utils.DataLoader(dataset, batch_size=args.train_batch_size, shuffle=True, pin_memory=True)
 
-    model = RandomForestClassifier(n_estimators=200, criterion='entropy', random_state=0)
-    model.fit(X_train, y_train)
+    # model
+    model = MLP(dataloader)
+    model.fit()
 
-    y_test_proba = model.predict_proba(X_test)[:, 1]
+    y_test_proba = model.predict_proba(X_test)
+    print(y_test_proba.shape)
 
-    print("=============Precision-Recall Curve=============")
-    precision, recall, thresholds_pr = precision_recall_curve(y_test, y_test_proba)
-    plt.figure("P-R Curve")
-    plt.title("Precision-Recall Curve")
-    plt.xlabel("Recall")
-    plt.ylabel("Precision")
-    plt.plot(recall, precision)
-    plt.show()
-
-    for threshold in [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4]:
+    for threshold in [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7]:
         print("threshold =", threshold)
         y_pred = np.zeros_like(y_test_proba)
         y_pred[np.where(np.array(y_test_proba) >= threshold)[0]] = 1

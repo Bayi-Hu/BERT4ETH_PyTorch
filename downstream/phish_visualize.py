@@ -8,7 +8,7 @@ with open("../data/phisher_account.txt", "r") as f:
     for line in f.readlines():
         phisher_account_set.add(line[:-1])
 
-input_dir = "../outputs/1130_epoch_20"
+input_dir = "../inter_data/bert4eth_exp_embed"
 
 address_input_dir = os.path.join(input_dir, "address.npy")
 embed_input_dir = os.path.join(input_dir, "embedding.npy")
@@ -42,8 +42,8 @@ plt.scatter(x=X_tsne[:10000, 0], y=X_tsne[:10000, 1], marker=".")
 plt.scatter(x=X_tsne[10000:, 0], y=X_tsne[10000:, 1], marker=".", color="orange")
 plt.show()
 
-plt.figure(figsize=(8, 6), dpi=80)
-plt.scatter(x=X_tsne[:10000, 0], y=X_tsne[:10000, 1], marker=".")
-plt.show()
+# plt.figure(figsize=(8, 6), dpi=80)
+# plt.scatter(x=X_tsne[:10000, 0], y=X_tsne[:10000, 1], marker=".")
+# plt.show()
 
 print("pause")
